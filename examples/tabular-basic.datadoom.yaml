@@ -1,0 +1,44 @@
+datadoom_version: "1"
+name: "tabular-basic"
+description: "P0 distribution-only sample: numeric, categorical, boolean, datetime, text."
+seed: 42
+rows: 5000
+
+features:
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 40, std: 12 }
+    min: 18
+    max: 90
+    dtype: int
+  income:
+    type: numeric
+    dist: lognormal
+    params: { mu: 10.5, sigma: 0.4 }
+    dtype: float
+  visits:
+    type: numeric
+    dist: poisson
+    params: { lam: 3 }
+    dtype: int
+  education:
+    type: categorical
+    categories: [hs, college, grad]
+    weights: [0.5, 0.4, 0.1]
+  is_member:
+    type: boolean
+    rate: 0.3
+  signup_date:
+    type: datetime
+    start: "2023-01-01"
+    end: "2024-12-31"
+    granularity: day
+  note:
+    type: text
+    generator: lorem
+    length: { min: 5, max: 20 }
+
+export:
+  formats: [csv]
+  versions: [clean]

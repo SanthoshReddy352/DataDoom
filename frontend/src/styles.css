@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===========================================================================
+   DataDoom — "Paper" design tokens. Light-only, premium, minimal.
+   One theme, by design: no dark mode. Palette preserved from the lab journal.
+   =========================================================================== */
+:root {
+  --bg: #faf9f6;
+  --surface-1: #ffffff;
+  --surface-2: #f4f2ec;
+  --surface-3: #ece9e0;
+  --border: #e6e2d8;
+  --border-strong: #d2ccbd;
+  --text: #181715;
+  --text-muted: #65625b;
+  --text-faint: #9a958a;
+
+  --primary: #5b43e6;
+  --primary-hover: #4a34cf;
+  --primary-tint: #ece9fc;
+  --hazard: #c8402a;
+  --hazard-tint: #f8e7e2;
+  --success: #2e7d43;
+  --success-tint: #e3f0e6;
+  --warning: #b7791f;
+  --info: #0e7c8b;
+
+  /* A layered, soft shadow scale — the core of the "premium" feel. */
+  --shadow-soft: 0 1px 2px rgba(24, 23, 21, 0.04);
+  --shadow-card: 0 1px 2px rgba(24, 23, 21, 0.04), 0 8px 24px rgba(24, 23, 21, 0.05);
+  --shadow-lift: 0 2px 4px rgba(24, 23, 21, 0.05), 0 12px 36px rgba(24, 23, 21, 0.09);
+  --shadow-pop: 0 8px 16px rgba(24, 23, 21, 0.08), 0 24px 56px rgba(24, 23, 21, 0.16);
+
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: theme("fontFamily.sans");
+  font-feature-settings: "cv05" 1, "ss01" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}
+
+/* --- Type system ----------------------------------------------------------- */
+.font-display {
+  font-family: theme("fontFamily.display");
+  font-feature-settings: "ss01" 1, "ss02" 1;
+  letter-spacing: -0.018em;
+}
+
+/* Tabular figures everywhere we show metrics. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Editorial kicker / eyebrow. */
+.kicker {
+  font-family: theme("fontFamily.sans");
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+/* The DataDoom wordmark — set tight, with an accent dot. */
+.wordmark {
+  font-family: theme("fontFamily.display");
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-feature-settings: "ss01" 1;
+}
+.wordmark-dot {
+  color: var(--primary);
+}
+
+/* --- Scrollbars ------------------------------------------------------------ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-faint);
+  background-clip: padding-box;
+}
+
+/* A subtle paper-grain dot grid used on canvases and empty states. */
+.dotgrid {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.dotgrid-strong {
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
+
+/* Focus ring helper for custom interactive elements. */
+.ring-focus {
+  outline: none;
+}
+.ring-focus:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary);
+}
+
+/* --- React Flow theming (light-only) -------------------------------------- */
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__controls {
+  box-shadow: var(--shadow-card);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.react-flow__controls-button {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.react-flow__controls-button:hover {
+  background: var(--surface-2);
+}
+.react-flow__handle {
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+.react-flow__edge-path {
+  transition: stroke 0.12s ease;
+}

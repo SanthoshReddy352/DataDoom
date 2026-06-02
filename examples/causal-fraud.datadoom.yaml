@@ -1,0 +1,41 @@
+datadoom_version: "1"
+name: "causal-fraud"
+description: "P2 causal sample: age -> income -> is_fraud, with education -> income."
+seed: 42
+rows: 5000
+
+features:
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 40, std: 12 }
+    min: 18
+    max: 90
+    dtype: int
+  education:
+    type: categorical
+    categories: [hs, college, grad]
+    weights: [0.5, 0.4, 0.1]
+  income:
+    type: numeric          # derived
+    dtype: float
+    min: 0
+  is_fraud:
+    type: boolean          # derived (target)
+
+causal:
+  edges:
+    - { from: age,       to: income,   fn: linear,   weight: 800, bias: 10000 }
+    - { from: education, to: income,   fn: map,      mapping: { hs: 0, college: 15000, grad: 40000 } }
+    - { from: income,    to: is_fraud, fn: logistic, weight: -0.00002, bias: 1.0 }
+  noise:
+    income: { dist: normal, params: { mean: 0, std: 5000 } }
+    is_fraud: { dist: none }
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Predict is_fraud from age, education, income."
+  tags: [causal, classification]

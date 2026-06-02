@@ -1,0 +1,1 @@
+"""DataDoom command-line interface."""

@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.import_linter_cache/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# DataDoom local data / generated artifacts
+.datadoom/
+/out/
+/tmp/
+.tmp_run/
+*.local.yaml
+
+# Frontend (added in a later phase)
+frontend/node_modules/
+frontend/dist/
+src/datadoom/webdist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+t.py

@@ -1,0 +1,27 @@
+datadoom_version: "1"
+name: "golden-numeric"
+description: "Deterministic golden spec for the P0 repro gate."
+seed: 12345
+rows: 2000
+
+features:
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 40, std: 12 }
+    dtype: float
+  spend:
+    type: numeric
+    dist: lognormal
+    params: { mu: 6.0, sigma: 0.5 }
+  tier:
+    type: categorical
+    categories: [bronze, silver, gold]
+    weights: [0.6, 0.3, 0.1]
+  active:
+    type: boolean
+    rate: 0.4
+
+export:
+  formats: [csv]
+  versions: [clean]
