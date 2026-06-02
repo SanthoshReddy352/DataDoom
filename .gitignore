@@ -3,8 +3,10 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .eggs/
-build/
-dist/
+# Anchor build-output dirs to the repo root so they don't swallow source
+# packages like src/datadoom/engine/dist/.
+/build/
+/dist/
 .venv/
 venv/
 env/
