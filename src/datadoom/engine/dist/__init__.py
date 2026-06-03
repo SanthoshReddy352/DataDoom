@@ -11,6 +11,12 @@ from .builtins import (
     sample_text,
 )
 from .compliance import ComplianceReport, FeatureCompliance, assess_numeric
+from .providers import (
+    REALISTIC_GENERATORS,
+    is_realistic_generator,
+    resolve_locale,
+    sample_provider,
+)
 
 __all__ = [
     "Distribution",
@@ -22,4 +28,8 @@ __all__ = [
     "sample_categorical",
     "sample_datetime",
     "sample_text",
+    "sample_provider",
+    "is_realistic_generator",
+    "resolve_locale",
+    "REALISTIC_GENERATORS",
 ]

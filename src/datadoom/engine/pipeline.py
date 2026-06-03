@@ -27,6 +27,7 @@ from .dist import (
     sample_boolean,
     sample_categorical,
     sample_datetime,
+    sample_provider,
     sample_text,
 )
 from .dist.compliance import DEFAULT_ALPHA
@@ -44,7 +45,16 @@ from .spec.models import (
     TextFeature,
 )
 
-STAGES = ("intake", "snapshot", "seed", "base_generation", "causal", "compliance", "packaging")
+STAGES = (
+    "intake",
+    "snapshot",
+    "seed",
+    "base_generation",
+    "causal",
+    "failure_injection",
+    "compliance",
+    "packaging",
+)
 
 
 @dataclass
@@ -69,6 +79,7 @@ class RunResult:
     artifacts: list[ArtifactInfo]
     out_dir: str | None
     report: ReportBundle
+    injected: pd.DataFrame | None = None
 
 
 def resolve_seed(spec: Spec, seed_override: int | None) -> int:
@@ -125,10 +136,12 @@ def _sample_feature(name: str, feat: Any, ctx: RunContext) -> tuple[np.ndarray, 
     if isinstance(feat, DatetimeFeature):
         return sample_datetime(rng, n, feat.start, feat.end, feat.granularity), 0.0
     if isinstance(feat, TextFeature):
-        return (
-            sample_text(rng, n, feat.length.get("min", 5), feat.length.get("max", 30)),
-            0.0,
-        )
+        if feat.generator == "lorem":
+            return (
+                sample_text(rng, n, feat.length.get("min", 5), feat.length.get("max", 30)),
+                0.0,
+            )
+        return sample_provider(rng, n, feat.generator, feat.locale), 0.0
     raise SpecValidationError(f"unsupported feature type for {name!r}", locator=f"features.{name}")
 
 
@@ -181,7 +194,17 @@ def generate(
     frame = pd.DataFrame(columns, columns=list(spec.features.keys()))
     ctx.frames["clean"] = frame
 
-    # 6. compliance (honest KS, no refit)
+    # 6. failure injection — corrupt a copy; the clean baseline is preserved.
+    injected: pd.DataFrame | None = None
+    failure_diffs: list[dict[str, Any]] | None = None
+    if spec.failures:
+        progress.emit("failure_injection", 62, "injecting failures")
+        from .failure import apply_failures
+
+        injected, failure_diffs = apply_failures(ctx, frame)
+        ctx.frames["injected"] = injected
+
+    # 7. compliance (honest KS, no refit) — assessed on the clean baseline.
     progress.emit("compliance", 70, "assessing distribution fit")
     report = ComplianceReport(alpha=alpha)
     for fname, feat in spec.features.items():
@@ -199,7 +222,7 @@ def generate(
             )
     ctx.reports["compliance"] = report
 
-    # 7. packaging
+    # 8. packaging
     progress.emit("packaging", 90, "writing artifacts")
     determinism: dict[str, Any] = {
         "spec_hash": ctx.spec_hash,
@@ -212,7 +235,9 @@ def generate(
     out_path: str | None = None
     if out_dir is not None:
         out_path = str(out_dir)
-        artifacts, metadata, checksums = _package(ctx, frame, report, determinism, Path(out_dir))
+        artifacts, metadata, checksums = _package(
+            ctx, frame, report, determinism, Path(out_dir), injected, failure_diffs
+        )
         determinism["artifact_checksums"] = checksums
 
     report_bundle = build_report(
@@ -221,6 +246,7 @@ def generate(
         determinism=determinism,
         causal=spec.causal,
         causal_dag=causal_dag,
+        failures=failure_diffs,
     )
 
     progress.emit("packaging", 100, "done")
@@ -233,6 +259,7 @@ def generate(
         artifacts=artifacts,
         out_dir=out_path,
         report=report_bundle,
+        injected=injected,
     )
 
 
@@ -242,6 +269,8 @@ def _package(
     report: ComplianceReport,
     determinism: dict[str, Any],
     out_dir: Path,
+    injected: pd.DataFrame | None = None,
+    failure_diffs: list[dict[str, Any]] | None = None,
 ) -> tuple[list[ArtifactInfo], dict[str, Any], dict[str, str]]:
     out_dir.mkdir(parents=True, exist_ok=True)
     exporter = EXPORTERS["csv"]
@@ -250,8 +279,19 @@ def _package(
     data_artifact = exporter.write(frame, data_path)
     # Store a path relative to out_dir so checksums/metadata are location-stable.
     data_artifact.path = data_path.name
+    data_artifact.version = "clean"
 
-    checksums = {data_artifact.path: data_artifact.checksum_sha256}
+    data_artifacts = [data_artifact]
+    # The injected variant ships alongside the clean baseline when the spec asks
+    # for it (and any failures actually ran).
+    if injected is not None and "injected" in ctx.spec.export.versions:
+        injected_path = out_dir / "data.injected.csv"
+        injected_artifact = exporter.write(injected, injected_path)
+        injected_artifact.path = injected_path.name
+        injected_artifact.version = "injected"
+        data_artifacts.append(injected_artifact)
+
+    checksums = {a.path: a.checksum_sha256 for a in data_artifacts}
     determinism = {**determinism, "artifact_checksums": checksums}
     metadata = build_metadata(
         spec_body=ctx.spec.body(),
@@ -259,9 +299,10 @@ def _package(
         seed=ctx.seed,
         rows=ctx.spec.rows,
         package_version=__version__,
-        artifacts=[data_artifact],
+        artifacts=data_artifacts,
         compliance=report.to_dict(),
         determinism=determinism,
+        failures=failure_diffs,
     )
     meta_artifact = write_metadata(metadata, out_dir / "metadata.json")
     meta_artifact.path = "metadata.json"
@@ -271,7 +312,7 @@ def _package(
     resolved_spec["seed"] = ctx.seed
     _write_resolved_spec(resolved_spec, out_dir / "spec.resolved.yaml")
 
-    return [data_artifact, meta_artifact], metadata, checksums
+    return [*data_artifacts, meta_artifact], metadata, checksums
 
 
 def _write_resolved_spec(spec_body: dict[str, Any], path: Path) -> None:

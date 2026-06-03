@@ -1,10 +1,12 @@
-import { Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Kicker } from "./ui";
+import { Kicker, Menu, MenuItem } from "./ui";
+import { clsx } from "@/lib/clsx";
 import { Histogram } from "./Histogram";
 import { DIST_PARAMS, NUMERIC_DISTS } from "@/lib/specDefaults";
 import { previewNumeric } from "@/lib/sampling";
 import type { Feature } from "@/lib/types";
+import { TEXT_GENERATORS, TEXT_LOCALES } from "@/lib/types";
 
 const FEATURE_TYPES: Feature["type"][] = ["numeric", "categorical", "boolean", "datetime", "text"];
 
@@ -388,15 +390,93 @@ function TextControls({
   f: Extract<Feature, { type: "text" }>;
   onChange: (f: Feature) => void;
 }) {
+  const gen = f.generator ?? "lorem";
   const len = f.length ?? { min: 5, max: 30 };
+
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <Row label="min tokens">
-        <NumInput value={len.min} onChange={(n) => onChange({ ...f, length: { ...len, min: n } })} />
+    <>
+      <Row label="Generator">
+        <MenuSelect value={gen} groups={TEXT_GENERATORS} onChange={(v) => onChange({ ...f, generator: v })} />
       </Row>
-      <Row label="max tokens">
-        <NumInput value={len.max} onChange={(n) => onChange({ ...f, length: { ...len, max: n } })} />
-      </Row>
-    </div>
+
+      {gen === "lorem" ? (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Row label="min tokens">
+            <NumInput value={len.min} onChange={(n) => onChange({ ...f, length: { ...len, min: n } })} />
+          </Row>
+          <Row label="max tokens">
+            <NumInput value={len.max} onChange={(n) => onChange({ ...f, length: { ...len, max: n } })} />
+          </Row>
+        </div>
+      ) : (
+        <Row label="Locale">
+          <MenuSelect value={f.locale ?? "en"} groups={[{ keys: TEXT_LOCALES }]} onChange={(v) => onChange({ ...f, locale: v })} />
+        </Row>
+      )}
+
+      <p className="mt-3 text-xs italic text-text-faint">
+        Realistic generators emit genuine-looking values (names, emails, addresses…) via mimesis, seeded
+        from this column's stream — so the same spec + seed still reproduces byte-identical data.
+      </p>
+    </>
+  );
+}
+
+/** A select-like control backed by the portal `Menu` so the option list is
+ * viewport-clamped — a native <select> popup spills off-screen in the
+ * right-edge inspector. Groups with a `group` label render a header. */
+function MenuSelect({
+  value,
+  groups,
+  onChange,
+}: {
+  value: string;
+  groups: { group?: string; keys: readonly string[] }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Menu
+      align="right"
+      fullWidth
+      trigger={({ open, toggle }) => (
+        <button
+          type="button"
+          onClick={toggle}
+          className="ring-focus mt-1 flex w-full items-center justify-between rounded-control border border-border bg-surface-2 px-2.5 py-1.5 text-left text-sm outline-none focus:border-primary"
+        >
+          <span className="truncate">{value}</span>
+          <ChevronDown
+            size={14}
+            className={clsx("ml-2 shrink-0 text-text-faint transition-transform", open && "rotate-180")}
+          />
+        </button>
+      )}
+    >
+      {(close) => (
+        <div className="w-[240px] max-w-[calc(100vw-1rem)]">
+          {groups.map((g, gi) => (
+            <div key={g.group ?? gi} className="mb-1 last:mb-0">
+              {g.group && (
+                <div className="px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-faint">
+                  {g.group}
+                </div>
+              )}
+              {g.keys.map((k) => (
+                <MenuItem
+                  key={k}
+                  onClick={() => {
+                    onChange(k);
+                    close();
+                  }}
+                  icon={<Check size={14} className={clsx("text-primary", k !== value && "opacity-0")} />}
+                >
+                  <span className="truncate">{k}</span>
+                </MenuItem>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Menu>
   );
 }

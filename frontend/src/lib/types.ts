@@ -33,10 +33,24 @@ export interface DatetimeFeature {
 }
 export interface TextFeature {
   type: "text";
-  generator?: string;
+  generator?: string; // "lorem" | a realistic provider key (name, email, …)
+  locale?: string; // mimesis locale for realistic generators (default "en")
   length?: { min: number; max: number };
   description?: string | null;
 }
+
+// Realistic-but-deterministic text providers (mimesis), grouped for the Inspector.
+// Mirrors engine/dist/providers.py — keep in sync.
+export const TEXT_GENERATORS: { group: string; keys: string[] }[] = [
+  { group: "Filler", keys: ["lorem"] },
+  { group: "People", keys: ["name", "first_name", "last_name", "email", "username", "phone", "occupation", "title", "nationality"] },
+  { group: "Places", keys: ["address", "street", "city", "state", "country", "postal_code"] },
+  { group: "Business", keys: ["company", "currency", "price"] },
+  { group: "Internet", keys: ["url", "hostname", "ipv4"] },
+  { group: "Generic text", keys: ["word", "sentence", "color"] },
+];
+
+export const TEXT_LOCALES = ["en", "de", "fr", "es", "it", "pt", "ru", "nl", "pl", "sv", "ja", "zh"] as const;
 export type Feature =
   | NumericFeature
   | CategoricalFeature
@@ -67,6 +81,46 @@ export interface CausalGraph {
   interventions?: Intervention[];
 }
 
+// Failure injection (04 §7). One flat shape covers all builtins; the configurator
+// only surfaces the fields a given `type` uses. Mirrors the engine's loose
+// `extra="allow"` failure model.
+export type FailureType =
+  | "mcar"
+  | "mar"
+  | "mnar"
+  | "label_noise"
+  | "feature_noise"
+  | "drift"
+  | "covariate_shift"
+  | "leakage";
+
+export interface DriftSchedule {
+  kind?: "linear" | "step";
+  magnitude?: number;
+  rate?: number;
+  at?: number;
+}
+export interface ShiftTarget {
+  mean?: number;
+  std?: number;
+}
+export interface Failure {
+  type: FailureType;
+  column?: string;
+  columns?: string[];
+  rate?: number;
+  driver?: string;
+  strength?: number;
+  dist?: string;
+  params?: Record<string, number>;
+  schedule?: DriftSchedule;
+  // `target` is a moment spec for covariate_shift, but a column name for leakage
+  // (the engine keys both on `target`).
+  target?: ShiftTarget | string;
+  into?: string;
+  noise?: number;
+}
+
 export interface Spec {
   datadoom_version: string;
   name: string;
@@ -76,8 +130,8 @@ export interface Spec {
   features: Record<string, Feature>;
   causal?: CausalGraph | null;
   difficulty?: unknown;
-  failures?: unknown[];
-  export?: unknown;
+  failures?: Failure[];
+  export?: { formats?: string[]; versions?: string[]; [k: string]: unknown } | null;
   meta?: Record<string, unknown>;
 }
 
@@ -183,6 +237,36 @@ export interface MatrixReport {
   matrix: (number | null)[][];
 }
 
+// One entry per injected failure, carrying the realized (authoritative) effect
+// the engine measured. Fields beyond the common ones vary by mechanism.
+export interface FailureDiff {
+  index: number;
+  type: FailureType;
+  mechanism?: string;
+  column?: string;
+  driver?: string;
+  rate?: number;
+  target_rate?: number;
+  realized_rate?: number;
+  nullified_fraction?: Record<string, number>;
+  flipped_fraction?: number;
+  realized_noise_std?: number;
+  realized_mean_shift?: number;
+  total_shift?: number;
+  mean_shift_second_vs_first_half?: number;
+  before?: { mean: number; std: number };
+  after?: { mean: number; std: number };
+  target?: string;
+  into?: string;
+  realized_correlation?: number | null;
+  self_dependent?: boolean;
+  [k: string]: unknown;
+}
+export interface FailuresReport {
+  count: number;
+  modes: FailureDiff[];
+}
+
 export interface Report {
   report_id: string;
   run_id: string;
@@ -198,7 +282,7 @@ export interface Report {
   mutual_information?: MatrixReport | null;
   causal_truth?: CausalTruth | null;
   difficulty?: unknown;
-  failures?: unknown;
+  failures?: FailuresReport | null;
   determinism?: {
     spec_hash: string;
     seed: number;

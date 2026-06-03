@@ -1,0 +1,49 @@
+datadoom_version: "1"
+name: "people-realistic"
+description: "Realistic-but-deterministic text via mimesis providers (name, email, address, …). Same (spec_hash, seed) → byte-identical strings."
+seed: 42
+rows: 2000
+
+features:
+  full_name:
+    type: text
+    generator: name
+  email:
+    type: text
+    generator: email
+  phone:
+    type: text
+    generator: phone
+  company:
+    type: text
+    generator: company
+  job_title:
+    type: text
+    generator: occupation
+  city:
+    type: text
+    generator: city
+  country:
+    type: text
+    generator: country
+  # A non-English locale to show locale support is wired through.
+  german_city:
+    type: text
+    generator: city
+    locale: de
+  # Numeric/categorical columns still flow through the seeded numeric path.
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 38, std: 11 }
+    min: 18
+    max: 80
+    dtype: int
+  tier:
+    type: categorical
+    categories: [free, pro, enterprise]
+    weights: [0.7, 0.25, 0.05]
+
+export:
+  formats: [csv]
+  versions: [clean]

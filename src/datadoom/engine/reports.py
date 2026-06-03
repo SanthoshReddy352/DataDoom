@@ -160,6 +160,17 @@ def causal_truth(
     }
 
 
+def failures_section(diffs: list[dict[str, Any]] | None) -> dict[str, Any] | None:
+    """Wrap the per-mode failure diffs into the report's ``failures`` section.
+
+    ``None`` when no failures were injected, so the UI can tell "no corruption"
+    apart from "corruption with empty effect".
+    """
+    if not diffs:
+        return None
+    return {"count": len(diffs), "modes": diffs}
+
+
 def build_report(
     *,
     compliance: ComplianceReport,
@@ -167,6 +178,7 @@ def build_report(
     determinism: dict[str, Any],
     causal: CausalGraph | None = None,
     causal_dag: CausalDag | None = None,
+    failures: list[dict[str, Any]] | None = None,
 ) -> ReportBundle:
     """Assemble the report bundle from the realized frame and compliance pass."""
     return ReportBundle(
@@ -175,5 +187,6 @@ def build_report(
         correlation=correlation_pearson(frame),
         mutual_information=mutual_information_matrix(frame),
         causal_truth=causal_truth(causal, causal_dag),
+        failures=failures_section(failures),
         determinism=determinism,
     )

@@ -18,10 +18,11 @@ import "reactflow/dist/style.css";
 import { AlertTriangle, Crosshair, Maximize2, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import type { CausalSelection } from "./CausalInspector";
 import { TypeChip } from "./ui";
+import { FailureBadges } from "./FailureBadges";
 import { causalSettings, edgeFnLabel, featureSettings, type SettingRow } from "@/lib/summary";
 import { defaultEdge, derivedNames, getCausal, interventionMap, topoLayers, wouldCycle } from "@/lib/causal";
 import { loadLayout, saveLayout } from "@/lib/viewLayout";
-import type { CausalGraph, Spec } from "@/lib/types";
+import type { CausalGraph, Failure, Spec } from "@/lib/types";
 
 type SavedNode = { x: number; y: number; width?: number; height?: number };
 
@@ -32,6 +33,7 @@ interface FeatureNodeData {
   intervened: boolean;
   selected: boolean;
   rows: SettingRow[];
+  failures?: Failure[];
   onDelete: () => void;
 }
 
@@ -80,6 +82,7 @@ function FeatureNode({ data }: NodeProps<FeatureNodeData>) {
               {data.derived ? "derived" : "root"}
             </span>
           </div>
+          <FailureBadges failures={data.failures} column={data.label} className="mt-1.5" />
           {data.rows.length > 0 && (
             <dl className="mt-1.5 space-y-0.5">
               {data.rows.map((s, i) => (
@@ -209,7 +212,8 @@ export function CausalGraphEditor({
           type: "feature",
           position: ex?.position ?? fallback,
           width: ex?.width ?? saved?.width,
-          height: ex?.height ?? saved?.height,
+          // Height is content-driven (auto) so every setting is always visible —
+          // we persist width + position only, never a height that could clip rows.
           style: ex?.style ?? (saved?.width ? { width: saved.width } : { width: 216 }),
           draggable: true,
           data: {
@@ -219,6 +223,7 @@ export function CausalGraphEditor({
             intervened: name in ivMap,
             selected: selection?.kind === "node" && selection.name === name,
             rows: [...featureSettings(spec.features[name]), ...causalSettings(causal, name)],
+            failures: spec.failures,
             onDelete: () => onDeleteColumn(name),
           },
         } as Node<FeatureNodeData>;
@@ -237,7 +242,6 @@ export function CausalGraphEditor({
           x: n.position.x,
           y: n.position.y,
           width: n.width ?? undefined,
-          height: n.height ?? undefined,
         };
       }
       savedRef.current = map;

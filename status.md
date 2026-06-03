@@ -4,7 +4,7 @@
 > this file tracks delivery against it. Update it whenever a task's status
 > changes or a task is broken down into subtasks.
 >
-> **Last updated:** 2026-06-02
+> **Last updated:** 2026-06-03
 
 ## How to read this file
 
@@ -46,8 +46,10 @@
 | 10 | `frontend/` — React Canvas MVP | P1 | ✅ | 2026-06-01 |
 | 11 | `engine/causal/` — DAG/SEM + interventions | P2 | ✅ | 2026-06-02 |
 | 12 | Frontend Graph view (React Flow) | P2 | ✅ | 2026-06-02 |
-| 13 | `engine/failure/` — MCAR/MAR/MNAR, noise, drift… | P3 | ⬜ | — |
-| 14 | Frontend Failure Configurator + Comparison | P3 | ⬜ | — |
+| 13 | `engine/failure/` — MCAR/MAR/MNAR, noise, drift… | P3 | ✅ | 2026-06-02 |
+| 14 | Frontend Failure Configurator + Comparison | P3 | ✅ | 2026-06-02 |
+| E1 | Realistic text providers (mimesis), seeded for determinism | Enhancement | ✅ | 2026-06-03 |
+| E2 | Frontend Generation-Overview dashboard tab (from metadata) | Enhancement | ✅ | 2026-06-03 |
 | 15 | `engine/difficulty/` — probes + adaptive loop | P4 | ⬜ | — |
 | 16 | Frontend difficulty UI + evaluation report | P4 | ⬜ | — |
 | 17 | `plugins/` — registry + loader + scaffolder | P5 | ⬜ | — |
@@ -283,12 +285,58 @@ an actual validated pass/fail for the most common real-world feature shapes
 (ages, counts, bounded scores). Deferred as medium-risk (binning/low-count merge
 rules) and orthogonal to the P2 gate; the current behavior is honest and safe.
 
-## Detail — Phase 3+ (remaining)
+## Detail — Phase 3 (Failure injection — engine done)
 
-Tasks 13–19 are defined in `docs_v2/17_Implementation_Guide.md` (steps 13–19) and
-`docs_v2/16_Engineering_Roadmap.md` (P3–P6). Next up is **P3 — failure injection**
-(`engine/failure/` + the Failure Configurator UI). They will be broken down here
-as each is picked up.
+> Engine (task **13**) delivered. The pipeline grows a `failure_injection` stage
+> (intake → snapshot → seed → base_generation → causal → **failure_injection** →
+> compliance → packaging): the clean baseline is captured first, then the spec's
+> ordered failures corrupt a *copy*, each drawing from `RNG(failure:i)`. Compliance
+> is still assessed on the clean frame; the injected variant ships as
+> `data.injected.csv` when `export.versions` includes `injected`. The
+> persistence/API/report schema already carried a `failures` section (stubbed from
+> P1), so it lights up with no migration. Frontend Failure Configurator (task 14)
+> remains open.
+
+### 13 — `engine/failure/` ✅
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 13.1 | `base.py` — `FailureMode` ABC + helpers (stable `sigmoid`, NaN-robust `standardize`, **logistic intercept calibration** by bisection, rate/reference validators) | ✅ | calibration makes MAR/MNAR honor the *expected* rate while staying driver/value-dependent |
+| 13.2 | `modes.py` — 8 builtins: `mcar`, `mar`, `mnar`, `label_noise`, `feature_noise`, `drift` (linear/step), `covariate_shift` (affine moment-match), `leakage` | ✅ | each mutates the injected copy + returns a diff summary; honest math, no refitting |
+| 13.3 | `apply.py` + `__init__.py` — orchestrator (`apply_failures`) + `FAILURE_MODES` registry | ✅ | sequential, per-mode `RNG(failure:i)`; clean frame deep-copied first |
+| 13.4 | Pipeline `failure_injection` stage + `RunResult.injected`; injected CSV artifact (versioned) + metadata `failures` | ✅ | `ArtifactInfo.version` (`clean`/`injected`); worker persists per-artifact version |
+| 13.5 | `reports.py` — `failures` section (count + per-mode diffs); `validate.py` — dispatch to mode validators (unknown type rejected; per-mode field/type/reference checks) | ✅ | replaces the generic P1 stub with type-aware validation |
+| 13.6 | NaN-preservation fix: int columns already nullified by a prior failure stay float under `feature_noise`/`drift`/`covariate_shift` (NaN can't cast to int64) | ✅ | `_assign_numeric` guard; missingness survives a later additive transform |
+| 13.7 | Tests: rate accuracy, MAR/MNAR driver/value correlation, label-flip-to-different-class, feature-noise std, drift schedule, covariate moment-match, leakage MI/correlation, clean-baseline preserved + reproducible, injected determinism, 12 validation cases | ✅ | `tests/unit/test_failure.py` (26) + `data.injected.csv` byte-stability in the determinism gate; suite 123 → 151 |
+| 13.8 | `examples/failure-fraud.datadoom.yaml` (causal-fraud DAG + 6 stacked failures; `versions: [clean, injected]`) in the determinism gate | ✅ | CLI `run`/`verify` green; both variants byte-stable |
+| 13.9 | **Critical mathematical audit** — recover each mechanism's parameters from the realized data vs exact/asymptotic theory (the P3 analogue of `test_dataset_audit.py`) | ✅ | `tests/unit/test_failure_audit.py` (14): MAR/MNAR **IRLS logistic-slope recovery** + calibrated rate; categorical **uniform transition matrix** (off-diag = p/(k−1)); boolean symmetric flip + marginal `q(1−p)+(1−q)p`; feature-noise σ + **KS-Gaussian** + independence; drift exact ramp (max err ~1e-14); covariate_shift exact moments (1e-6); leakage **corr = 1/√(1+η²)** (1e-3); MCAR 3σ band + Welch-t independence. Suite 151 → 165 |
+
+### 14 — Frontend Failure Configurator + Comparison ✅
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 14.1 | Typed `Failure`/`FailuresReport`/`FailureDiff` shapes (`lib/types.ts`); `preview(version)` on the API client | ✅ | `target` is a union (moment spec for covariate_shift, column name for leakage) mirroring the engine's loose model |
+| 14.2 | `lib/failures.ts` — mechanism metadata registry (label/category/blurb/math/accent), `defaultFailure`, `summarizeFailure`, **declarative impact estimates** (e.g. leakage corr = 1/√(1+η²)), client pre-flight validation, `reconcileFailures` on rename/delete | ✅ | impact is a consequence of the knobs, **not** a re-simulation — honest; authoritative effect comes from the run report |
+| 14.3 | `FailureConfigurator` — Canvas **Failures** view: ordered pipeline of stage cards (reorder ↑/↓, delete, select, live impact chip, inline validation), grouped **Add failure** menu (Missingness/Noise/Shift/Leakage), clean-baseline guarantee banner, empty state, injected-export toggle | ✅ | third Segmented tab with a count badge; matches Table/Graph main+inspector layout |
+| 14.4 | `FailureInspector` — per-step editor (aside): type-aware controls (column/driver selects, rate/strength/noise sliders, dist+params, drift schedule, target moments, multi-column chips), **live impact card** + the honest math | ✅ | mirrors the column Inspector pattern |
+| 14.5 | Canvas wiring: `failures` view + selection, reconcile failures on column rename/delete, auto-enable `export.versions: [clean, injected]` on first failure | ✅ | `pages/Canvas.tsx` |
+| 14.6 | `ComparisonView` + Results **Comparison** tab (shown when the run has failures): summary pull-stats, **per-mode realized-effect cards** (authoritative engine diffs with bars/gauges/sparklines), clean-vs-injected **distribution overlays**, and a **cell-level diff table** (nullified ∅ / changed / planted-column highlights, "changed rows only" filter) | ✅ | fetches the injected preview via `preview(version="injected")` |
+| 14.7 | New `--warning-tint`/`--info-tint` tokens; build into `src/datadoom/webdist/` (tsc strict clean); end-to-end API contract verified (run → `report.failures` realized stats; `clean`+`injected` artifacts; injected preview carries the planted column + nulls; SPA serves) | ✅ | mnar realized 0.233, leakage corr 0.999 over HTTP |
+| 14.8 | **UX fixes (round 2):** stale-cache lost-updates (sync `["dataset",id]` on save + unmount flush + re-arm loader on id change), visible autosave errors (was stuck on "saving…"), Menu scroll no longer self-closes, single-line Add-failure button/menu, generate **with/without failures** (strip-and-restore snapshot — clean run, config preserved), Comparison **"changed rows only"** excludes the planted column (+count), failure badges surfaced on **Table columns & Graph nodes** | ✅ | verified: without-failures → `report.failures: None` + clean-only artifact + spec restored |
+| 14.9 | **Full settings visibility + faithful Results graph:** edge params expand to one row each (`edgeParamRows`: weight/bias, every coeff, every map entry) — no ellipsis — in Table/Graph/Results; the Results **Causal Graph** now loads the editor's saved `graph-nodes` layout (exact positions + node sizes) and mirrors the editor node, so it renders the graph the user actually built | ✅ | `CausalGraphView` reuses per-dataset layout; `fitView` preserves spacing |
+
+> **P3 exit gate:** ✅ author failures (MNAR + label noise + leakage …) in the
+> Canvas **Failures** view, generate, and inspect the realized diffs + clean-vs-
+> injected comparison in Results — the clean variant remains available. See
+> `examples/failure-fraud.datadoom.yaml`, [testing_guide.md](testing_guide.md)
+> Groups **M** (engine) and **N** (web). **Phase 3 complete.**
+
+## Detail — Phase 4+ (remaining)
+
+Tasks 15–19 are defined in `docs_v2/17_Implementation_Guide.md` (steps 15–19) and
+`docs_v2/16_Engineering_Roadmap.md` (P4–P6). Next up is **P4 — difficulty
+targeting** (`engine/difficulty/` probes + adaptive loop, then the difficulty UI +
+evaluation report). They will be broken down here as each is picked up.
 
 ---
 
@@ -309,3 +357,8 @@ as each is picked up.
 | 2026-06-02 | Logged a **backlog** item (task 11 detail): an effective-distribution goodness-of-fit (chi-square against the truncated+discretized PMF) so integer/discrete/clamped features can earn a real compliance pass instead of abstaining (`applicable: False`). Added **end-to-end dataset-audit tests** (`tests/unit/test_dataset_audit.py`, 13) that generate from the shipped examples and assert the realized frame matches the spec — for the **non-causal** `tabular-basic` (per-feature moments, bounds, categorical weights, boolean rate, datetime range, text length, honest KS-applicability) and the **causal** `causal-fraud` (OLS coefficient recovery, noise scale, logistic calibration, true-graph). Suite 110 → 123; ruff/mypy/import-linter green. testing_guide.md gains Group **K**. |
 | 2026-06-02 | Implemented Phase 2 frontend (task **12**): the web **Graph view**. Added `reactflow`; typed the causal graph + report shapes in `lib/types.ts`; `lib/causal.ts` (topological auto-layout, client-side cycle detection, derived↔dist reconciliation, intervention helpers). New `CausalGraphEditor` (drag-to-connect with live cycle-rejection toast, topological layout, derived/intervention badges), `CausalInspector` (structural-fn editor for linear/logistic/polynomial/map/identity + per-node noise + `do()` intervention), and a read-only `CausalGraphView`. Canvas gains a **Table ⇄ Graph** toggle with a contextual right panel; Results gains a **Causal Graph** tab (true DAG) and a **Correlation & MI** tab, and now renders KS-applicability honestly (`n/a` for integer/discrete/clamped, with `N of M applicable`). Built into `src/datadoom/webdist/` (tsc strict clean); end-to-end API smoke confirms the SPA serves and a causal run's report carries `causal_truth`/`mutual_information`. **Phase 2 complete.** testing_guide.md gains Group **L**. |
 | 2026-06-02 | Fixed `sqlite3.OperationalError: no such column: reports.mutual_information` on existing databases created before the `0002_report_mutual_information` migration existed. The model and migration were correct, but existing DBs (stuck at `0001_init`) had never had the upgrade applied. Applied `alembic upgrade head` to bring the on-disk schema up to date. |
+| 2026-06-02 | Implemented Phase 3 engine (task **13**): new `engine/failure/` (`base.py` `FailureMode` ABC + helpers — stable `sigmoid`, NaN-robust `standardize`, logistic-intercept calibration; `modes.py` 8 builtins — mcar/mar/mnar/label_noise/feature_noise/drift/covariate_shift/leakage, each returning a diff summary; `apply.py` orchestrator + `FAILURE_MODES` registry). Pipeline grows a `failure_injection` stage that captures the clean baseline then corrupts a copy via `RNG(failure:i)`; `RunResult.injected` + a versioned `data.injected.csv` artifact (`ArtifactInfo.version`) written when `export.versions` includes `injected`; metadata gains a `failures` block. `reports.py` populates the `failures` section (already wired through store/API from P1 — no migration). `validate.py` now dispatches to per-mode validators (unknown type + per-mode field/type/reference checks). Fixed a NaN-cast bug (`_assign_numeric`) so additive transforms preserve earlier injected missingness on int columns. Added `examples/failure-fraud.datadoom.yaml`; `tests/unit/test_failure.py` (26) + injected byte-stability in the determinism gate. Suite 123 → 151; ruff/mypy/import-linter green; CLI `run`/`verify` confirmed. Frontend Failure Configurator (task 14) still open. testing_guide.md gains Group **M**. |
+| 2026-06-02 | Added a **critical mathematical audit** for the failure modes (task **13.9**, `tests/unit/test_failure_audit.py`, 14) — the P3 analogue of the Phase-2 dataset audit: generate at n=20k and *recover each mechanism's parameters from the realized frame* rather than eyeballing a rough rate. Empirically verified (n=40k probe): **MAR/MNAR** IRLS logistic regression recovers the `strength` slope (1.50/3.00 → 1.497/3.021) with the calibrated intercept hitting the 0.20 rate; **categorical label_noise** transition matrix is uniform (off-diagonals = p/(k−1) = 0.0667, diagonal = 1−p); **boolean label_noise** flip is class-symmetric and the marginal matches `q(1−p)+(1−q)p`; **feature_noise** ε passes KS-Gaussian (p≈0.98), recovers σ, independent of x; **drift** is an exact linear ramp (max error ~1e-14); **covariate_shift** hits target mean/std to 8 decimals; **leakage** correlation matches the closed form `1/√(1+η²)` to 5 decimals; **MCAR** sits in the binomial 3σ band with Welch-t confirming independence. Suite 151 → 165; all gates green. |
+| 2026-06-03 | Implemented enhancement **E2**: the web **Generation Overview** dashboard tab (default tab on the Results page), composed entirely from the reproducible metadata (spec + report + artifacts) — no engine change. New `OverviewView.tsx`: headline numerals (rows/columns/compliance/failure-modes/seed), a dependency-free SVG **donut** of column-type composition (reusing `TYPE_COLOR`), a **distribution-family** bar list, a conditional **causal-structure** summary (edges/derived/interventions), a conditional **failure-by-mode** bar list, and an **artifacts** table (format/version/human size/short checksum). Also wired realistic-generator authoring into the Canvas: `TextControls` (Inspector) gains a grouped Generator dropdown + Locale select (length inputs only for `lorem`); `lib/types.ts` gains `TextFeature.locale`, `TEXT_GENERATORS`, `TEXT_LOCALES`; `summary.ts` shows locale (not token length) for realistic generators. Frontend builds (tsc strict + vite) clean into `webdist/`. testing_guide.md gains **O1**. |
+| 2026-06-03 | Implemented enhancement **E1**: realistic-but-deterministic text providers backed by *mimesis*. New `engine/dist/providers.py` — a 24-key provider catalog (name/first_name/last_name/email/username/phone/occupation/title/nationality/address/street/city/state/country/postal_code/company/currency/price/url/hostname/ipv4/word/sentence/color) plus `resolve_locale`. mimesis is seeded per-feature from a 32-bit int pulled off the feature's own `RNG(feature:name)` (isolated, non-global), so `(spec_hash, seed)` stays byte-reproducible on the pinned mimesis line — same contract as the numpy pin. `TextFeature` gains optional `generator` (non-`lorem`) + `locale`; `pipeline._sample_feature` dispatches lorem→`sample_text` else `sample_provider`; `validate.py` rejects unknown generator/locale early. Added `mimesis>=19,<20` core dep, `examples/people-realistic.datadoom.yaml` (also in the determinism gate), `tests/unit/test_providers.py` (10). ruff/mypy/import-linter green (engine stays framework-free — mimesis is a pure offline lib). testing_guide.md gains **G5b**. |
+| 2026-06-02 | Implemented Phase 3 frontend (task **14**): the web **Failure Configurator + Comparison**. Canvas gains a third **Failures** view (`FailureConfigurator` + `FailureInspector`) — an ordered, reorderable pipeline of stage cards with a grouped Add-failure menu, type-aware controls (column/driver selects, rate/strength/noise sliders, dist+params, drift schedule, target moments, multi-column chips), live declarative impact estimates, inline validation, a clean-baseline guarantee banner, and an injected-export toggle (auto-enabled on first failure). `lib/failures.ts` holds the mechanism metadata, defaults, summaries, honest impact math, client pre-flight validation, and rename/delete reconciliation. Results gains a **Comparison** tab (`ComparisonView`, shown when the run injected failures): summary pull-stats, per-mode realized-effect cards (authoritative engine diffs as bars/gauges/sparklines), clean-vs-injected distribution overlays, and a cell-level diff table (nullified/changed/planted-column highlights + "changed rows only"). Added `--warning-tint`/`--info-tint` design tokens. Built into `src/datadoom/webdist/` (tsc strict clean); end-to-end API contract verified over HTTP (run → `report.failures` realized stats; `clean`+`injected` artifacts; injected preview carries the planted column + nulls; SPA serves). **P3 exit gate met — Phase 3 complete.** testing_guide.md gains Group **N**. |

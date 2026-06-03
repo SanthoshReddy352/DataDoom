@@ -25,7 +25,9 @@
   --success: #2e7d43;
   --success-tint: #e3f0e6;
   --warning: #b7791f;
+  --warning-tint: #f6ecd9;
   --info: #0e7c8b;
+  --info-tint: #dcf0f2;
 
   /* A layered, soft shadow scale — the core of the "premium" feel. */
   --shadow-soft: 0 1px 2px rgba(24, 23, 21, 0.04);

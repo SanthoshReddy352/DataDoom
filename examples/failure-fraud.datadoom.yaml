@@ -1,0 +1,65 @@
+datadoom_version: "1"
+name: "failure-fraud"
+description: "P3 failure-injection sample: the causal-fraud DAG plus a stack of realistic corruptions (missingness, label noise, drift, leakage)."
+seed: 42
+rows: 5000
+
+features:
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 40, std: 12 }
+    min: 18
+    max: 90
+    dtype: int
+  education:
+    type: categorical
+    categories: [hs, college, grad]
+    weights: [0.5, 0.4, 0.1]
+  income:
+    type: numeric          # derived
+    dtype: float
+    min: 0
+  is_fraud:
+    type: boolean          # derived (target)
+
+causal:
+  edges:
+    - { from: age,       to: income,   fn: linear,   weight: 800, bias: 10000 }
+    - { from: education, to: income,   fn: map,      mapping: { hs: 0, college: 15000, grad: 40000 } }
+    - { from: income,    to: is_fraud, fn: logistic, weight: -0.00002, bias: 1.0 }
+  noise:
+    income: { dist: normal, params: { mean: 0, std: 5000 } }
+    is_fraud: { dist: none }
+
+# Ordered corruptions applied after the clean baseline is captured.
+failures:
+  - type: mnar               # high earners under-report income
+    column: income
+    rate: 0.12
+    strength: 2.5
+  - type: mcar               # random gaps in age
+    columns: [age]
+    rate: 0.05
+  - type: label_noise        # mislabelled fraud cases
+    column: is_fraud
+    rate: 0.03
+  - type: feature_noise      # measurement jitter on age
+    column: age
+    dist: normal
+    params: { mean: 0, std: 2 }
+  - type: drift              # income inflates across the dataset index
+    column: income
+    schedule: { kind: linear, magnitude: 8000 }
+  - type: leakage            # plant a near-perfect proxy for the label
+    target: is_fraud
+    into: fraud_score
+    noise: 0.05
+
+export:
+  formats: [csv]
+  versions: [clean, injected]
+
+meta:
+  problem_statement: "Predict is_fraud from age, education, income — under realistic data quality failures."
+  tags: [failure-injection, robustness, classification]

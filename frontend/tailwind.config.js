@@ -23,7 +23,9 @@ export default {
         success: "var(--success)",
         "success-tint": "var(--success-tint)",
         warning: "var(--warning)",
+        "warning-tint": "var(--warning-tint)",
         info: "var(--info)",
+        "info-tint": "var(--info-tint)",
       },
       fontFamily: {
         // Display / brand voice.

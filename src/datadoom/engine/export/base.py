@@ -20,6 +20,7 @@ class ArtifactInfo:
     format: str
     checksum_sha256: str
     size_bytes: int
+    version: str = "clean"
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -27,6 +28,7 @@ class ArtifactInfo:
             "format": self.format,
             "checksum_sha256": self.checksum_sha256,
             "size_bytes": self.size_bytes,
+            "version": self.version,
         }
 
 

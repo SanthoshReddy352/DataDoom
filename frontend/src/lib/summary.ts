@@ -50,14 +50,44 @@ export function featureSettings(feature: Feature): SettingRow[] {
         { label: "to", value: feature.end ?? "—" },
         { label: "grain", value: feature.granularity ?? "day" },
       ];
-    case "text":
-      return [
-        { label: "generator", value: feature.generator ?? "lorem", tone: "accent" },
-        { label: "length", value: `${feature.length?.min ?? 5}–${feature.length?.max ?? 30}` },
-      ];
+    case "text": {
+      const gen = feature.generator ?? "lorem";
+      const rows: SettingRow[] = [{ label: "generator", value: gen, tone: "accent" }];
+      if (gen === "lorem") {
+        rows.push({ label: "length", value: `${feature.length?.min ?? 5}–${feature.length?.max ?? 30}` });
+      } else {
+        rows.push({ label: "locale", value: feature.locale ?? "en" });
+      }
+      return rows;
+    }
     default:
       return [];
   }
+}
+
+/** Full settings for one incoming edge: the parent + fn, then every parameter on
+ * its own row (weight, bias, each polynomial coefficient, each map entry) so no
+ * config is hidden behind an ellipsis. */
+export function edgeParamRows(
+  edge: Pick<CausalEdge, "from" | "fn" | "weight" | "bias" | "coeffs" | "mapping">,
+): SettingRow[] {
+  const rows: SettingRow[] = [{ label: `← ${edge.from}`, value: edge.fn, tone: "accent" }];
+  switch (edge.fn) {
+    case "linear":
+    case "logistic":
+      if (edge.weight != null) rows.push({ label: "· weight", value: num(edge.weight) });
+      if (edge.bias != null) rows.push({ label: "· bias", value: num(edge.bias) });
+      break;
+    case "polynomial":
+      (edge.coeffs ?? []).forEach((c, i) => rows.push({ label: `· c${i}`, value: num(c) }));
+      break;
+    case "map":
+      Object.entries(edge.mapping ?? {}).forEach(([k, v]) =>
+        rows.push({ label: `· ${k}`, value: num(v) }),
+      );
+      break;
+  }
+  return rows;
 }
 
 /** A compact, human-readable label for a structural function on an edge. */
@@ -105,9 +135,7 @@ export function nodeDerivation(causal: CausalGraph, name: string): NodeDerivatio
 export function causalSettings(causal: CausalGraph, name: string): SettingRow[] {
   const d = nodeDerivation(causal, name);
   const rows: SettingRow[] = [];
-  for (const e of d.incoming) {
-    rows.push({ label: `← ${e.from}`, value: edgeFnLabel(e), tone: "accent" });
-  }
+  for (const e of d.incoming) rows.push(...edgeParamRows(e));
   if (d.noise) {
     const ps = d.noise.params
       ? Object.entries(d.noise.params).map(([k, v]) => `${k}=${num(v)}`).join(" ")

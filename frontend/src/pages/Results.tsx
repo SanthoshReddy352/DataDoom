@@ -5,20 +5,31 @@ import { useParams } from "react-router-dom";
 import { Button, Card, CopyableHash, Kicker, PullStat, Spinner } from "@/components/ui";
 import { Histogram } from "@/components/Histogram";
 import { CausalGraphView } from "@/components/CausalGraphView";
+import { ComparisonView } from "@/components/ComparisonView";
+import { OverviewView } from "@/components/OverviewView";
 import { GenerationsPanel } from "@/components/GenerationsPanel";
 import { ExportModal } from "@/components/ExportModal";
 import { api } from "@/lib/api";
 import { clsx } from "@/lib/clsx";
 import { recoverSCM } from "@/lib/audit";
 import { useChrome } from "@/store/chrome";
-import type { FeatureCompliance, MatrixReport, Preview, Report, Spec } from "@/lib/types";
+import type { FailuresReport, FeatureCompliance, MatrixReport, Preview, Report, Spec } from "@/lib/types";
 
-const TABS = ["Data Preview", "Distributions", "Correlation & MI", "Causal Graph", "Generations", "Evaluation"] as const;
-type Tab = (typeof TABS)[number];
+const ALL_TABS = [
+  "Overview",
+  "Data Preview",
+  "Distributions",
+  "Correlation & MI",
+  "Causal Graph",
+  "Comparison",
+  "Generations",
+  "Evaluation",
+] as const;
+type Tab = (typeof ALL_TABS)[number];
 
 export function Results() {
   const { id, runId } = useParams<{ id: string; runId: string }>();
-  const [tab, setTab] = useState<Tab>("Evaluation");
+  const [tab, setTab] = useState<Tab>("Overview");
   const [exporting, setExporting] = useState(false);
   const setCrumbs = useChrome((s) => s.setCrumbs);
 
@@ -42,6 +53,8 @@ export function Results() {
   }
 
   const score = report.data?.compliance_score ?? null;
+  const hasFailures = !!(report.data?.failures as FailuresReport | null | undefined)?.count;
+  const tabs = ALL_TABS.filter((t) => t !== "Comparison" || hasFailures);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -63,26 +76,43 @@ export function Results() {
           </Button>
         </div>
 
-        <div className="mt-7 flex gap-1 overflow-x-auto border-b border-border">
-          {TABS.map((t) => (
+        <div className="mt-7 flex flex-wrap gap-x-1 gap-y-0 border-b border-border">
+          {tabs.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
               className={clsx(
-                "ring-focus whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                "ring-focus inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                 tab === t ? "border-primary text-text" : "border-transparent text-text-muted hover:text-text",
               )}
             >
               {t}
+              {t === "Comparison" && (
+                <span className="rounded-pill bg-primary-tint px-1.5 text-[10px] font-semibold text-primary tnum">
+                  {(report.data?.failures as FailuresReport | null | undefined)?.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
 
         <div className="mt-6 animate-fade-in">
+          {tab === "Overview" && (
+            <OverviewView
+              spec={spec.data?.body}
+              report={report.data}
+              preview={preview.data}
+              run={run.data}
+              artifacts={artifacts.data ?? []}
+            />
+          )}
           {tab === "Data Preview" && <PreviewTab data={preview.data} loading={preview.isLoading} />}
           {tab === "Distributions" && <DistributionsTab report={report.data} preview={preview.data} />}
           {tab === "Correlation & MI" && <CorrelationTab report={report.data} />}
-          {tab === "Causal Graph" && <CausalGraphTab report={report.data} spec={spec.data?.body} />}
+          {tab === "Causal Graph" && <CausalGraphTab report={report.data} spec={spec.data?.body} datasetId={datasetId} runId={runId} />}
+          {tab === "Comparison" && runId && (
+            <ComparisonView runId={runId} report={report.data} cleanPreview={preview.data} spec={spec.data?.body} />
+          )}
           {tab === "Generations" && <GenerationsPanel datasetId={datasetId} currentRunId={runId} />}
           {tab === "Evaluation" && <EvaluationTab report={report.data} preview={preview.data} score={score} />}
         </div>
@@ -278,7 +308,7 @@ function empiricalMap(report?: Report | null): Record<string, { mean?: number; s
   return out;
 }
 
-function CausalGraphTab({ report, spec }: { report?: Report | null; spec?: Spec }) {
+function CausalGraphTab({ report, spec, datasetId, runId }: { report?: Report | null; spec?: Spec; datasetId?: string; runId?: string }) {
   const truth = report?.causal_truth;
   if (!truth || truth.edges.length === 0) {
     return <Empty>This dataset has no causal structure — features are sampled independently.</Empty>;
@@ -290,7 +320,7 @@ function CausalGraphTab({ report, spec }: { report?: Report | null; spec?: Spec 
         <div className="border-b border-border px-4 py-2.5">
           <Kicker>True generating graph · every column's settings & structural equations</Kicker>
         </div>
-        <CausalGraphView truth={truth} spec={spec} empirical={empiricalMap(report)} />
+        <CausalGraphView truth={truth} spec={spec} datasetId={datasetId} runId={runId} empirical={empiricalMap(report)} />
       </Card>
       {interventions.length > 0 && (
         <Card className="p-4">

@@ -70,7 +70,10 @@ class DatetimeFeature(_Model):
 
 class TextFeature(_Model):
     type: Literal["text"]
+    # "lorem" emits filler words; any realistic provider key (name, email,
+    # address, company, …) is served by mimesis. See dist/providers.py.
     generator: str = "lorem"
+    locale: str = "en"
     length: dict[str, int] = Field(default_factory=lambda: {"min": 5, "max": 30})
     description: str | None = None
 

@@ -9,7 +9,13 @@ at the offending control.
 from __future__ import annotations
 
 from ..errors import SpecValidationError
-from .models import BooleanFeature, CategoricalFeature, NumericFeature, Spec
+from .models import (
+    BooleanFeature,
+    CategoricalFeature,
+    NumericFeature,
+    Spec,
+    TextFeature,
+)
 
 SUPPORTED_SPEC_VERSIONS = {"1"}
 
@@ -36,6 +42,7 @@ def _check_version(spec: Spec) -> None:
 def _check_features(spec: Spec) -> None:
     # Lazy import to keep the dist layer optional at module load time.
     from ..dist.builtins import REGISTRY
+    from ..dist.providers import is_realistic_generator, resolve_locale
 
     derived = _derived_names(spec)
     for name, feat in spec.features.items():
@@ -62,6 +69,12 @@ def _check_features(spec: Spec) -> None:
                 raise SpecValidationError(
                     "weights length must match categories length", locator=f"{loc}.weights"
                 )
+        elif isinstance(feat, TextFeature):
+            if feat.generator != "lorem" and not is_realistic_generator(feat.generator):
+                raise SpecValidationError(
+                    f"unknown text generator {feat.generator!r}", locator=f"{loc}.generator"
+                )
+            resolve_locale(feat.locale, locator=f"{loc}.locale")
 
 
 def _derived_names(spec: Spec) -> set[str]:
@@ -190,26 +203,21 @@ def _check_difficulty(spec: Spec) -> None:
 
 
 def _check_failures(spec: Spec) -> None:
-    feature_names = set(spec.features)
+    # Lazy import keeps the failure layer optional at module load time.
+    from ..failure.modes import FAILURE_MODES
+
     for i, failure in enumerate(spec.failures):
         loc = f"failures[{i}]"
-        data = failure.model_dump()
-        rate = data.get("rate")
-        if rate is not None and not 0.0 <= float(rate) <= 1.0:
-            raise SpecValidationError("rate must be in [0, 1]", locator=f"{loc}.rate")
-        for key in ("column", "driver", "target", "into"):
-            ref = data.get(key)
-            if isinstance(ref, str) and ref not in feature_names:
-                raise SpecValidationError(
-                    f"{key} {ref!r} is not a declared feature", locator=f"{loc}.{key}"
-                )
-        cols = data.get("columns")
-        if isinstance(cols, list):
-            for ref in cols:
-                if ref not in feature_names:
-                    raise SpecValidationError(
-                        f"column {ref!r} is not a declared feature", locator=f"{loc}.columns"
-                    )
+        mode = FAILURE_MODES.get(failure.type)
+        if mode is None:
+            raise SpecValidationError(
+                f"unknown failure type {failure.type!r} "
+                f"(known: {sorted(FAILURE_MODES)})",
+                locator=f"{loc}.type",
+            )
+        params = failure.model_dump()
+        params.pop("type", None)
+        mode.validate(params, spec.features, loc)
 
 
 def _check_export(spec: Spec) -> None:

@@ -18,10 +18,14 @@ REPO = Path(__file__).resolve().parents[2]
 GOLDEN_SPEC = REPO / "tests" / "golden" / "fraud_numeric.datadoom.yaml"
 EXAMPLE_SPEC = REPO / "examples" / "tabular-basic.datadoom.yaml"
 CAUSAL_SPEC = REPO / "examples" / "causal-fraud.datadoom.yaml"
+FAILURE_SPEC = REPO / "examples" / "failure-fraud.datadoom.yaml"
+PEOPLE_SPEC = REPO / "examples" / "people-realistic.datadoom.yaml"
 CHECKSUMS = REPO / "tests" / "golden" / "checksums.json"
 
 
-@pytest.mark.parametrize("spec_path", [GOLDEN_SPEC, EXAMPLE_SPEC, CAUSAL_SPEC])
+@pytest.mark.parametrize(
+    "spec_path", [GOLDEN_SPEC, EXAMPLE_SPEC, CAUSAL_SPEC, FAILURE_SPEC, PEOPLE_SPEC]
+)
 def test_two_runs_identical(tmp_path, spec_path) -> None:
     spec = load_spec(str(spec_path))
     r1 = generate(spec, seed=99, out_dir=tmp_path / "a")
@@ -34,6 +38,16 @@ def test_two_runs_identical(tmp_path, spec_path) -> None:
     b = (tmp_path / "b" / "data.csv").read_bytes()
     assert a == b
     assert r1.artifacts[0].checksum_sha256 == r2.artifacts[0].checksum_sha256
+
+
+def test_injected_variant_is_byte_stable(tmp_path) -> None:
+    """The injected corruption is itself reproducible on the pinned path."""
+    spec = load_spec(str(FAILURE_SPEC))
+    generate(spec, seed=99, out_dir=tmp_path / "a")
+    generate(spec, seed=99, out_dir=tmp_path / "b")
+    a = (tmp_path / "a" / "data.injected.csv").read_bytes()
+    b = (tmp_path / "b" / "data.injected.csv").read_bytes()
+    assert a == b
 
 
 def test_spec_hash_excludes_seed(tmp_path) -> None:

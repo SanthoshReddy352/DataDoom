@@ -91,8 +91,8 @@ export const api = {
   // results
   artifacts: (runId: string) => request<Artifact[]>(`/runs/${runId}/artifacts`),
   report: (runId: string) => request<Report>(`/runs/${runId}/report`),
-  preview: (runId: string, limit = 50) =>
-    request<Preview>(`/runs/${runId}/preview?limit=${limit}`),
+  preview: (runId: string, limit = 50, version = "clean") =>
+    request<Preview>(`/runs/${runId}/preview?limit=${limit}&version=${version}`),
 
   downloadUrl: (artifactId: string) => `/api/artifacts/${artifactId}/download`,
   bundleUrl: (runId: string) => `/api/runs/${runId}/bundle`,

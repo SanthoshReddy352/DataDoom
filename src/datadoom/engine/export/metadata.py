@@ -26,8 +26,9 @@ def build_metadata(
     artifacts: list[ArtifactInfo],
     compliance: dict[str, Any],
     determinism: dict[str, Any],
+    failures: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    return {
+    metadata: dict[str, Any] = {
         "datadoom_package_version": package_version,
         "spec_hash": spec_hash,
         "seed": seed,
@@ -37,6 +38,9 @@ def build_metadata(
         "compliance": compliance,
         "determinism": determinism,
     }
+    if failures is not None:
+        metadata["failures"] = failures
+    return metadata
 
 
 def write_metadata(metadata: dict[str, Any], path: str | Path) -> ArtifactInfo:

@@ -28,6 +28,10 @@ dependencies = [
     "pydantic>=2.5,<3",
     "PyYAML>=6,<7",
     "typer>=0.12,<1",
+    # Realistic-but-seeded text providers (names, emails, addresses, …). Pinned
+    # to a minor line because, like numpy for numeric draws, a different version
+    # can change the strings produced for a given seed (invariant #6).
+    "mimesis>=19,<20",
 ]
 
 [project.optional-dependencies]

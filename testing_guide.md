@@ -431,6 +431,27 @@ activated, the `datadoom` command is on your PATH.
 - **Files under test:** `sample_text`.
 - **Test file:** `tests/unit/test_dist_correctness.py`.
 
+### G5b — Realistic text providers (mimesis)
+- **What it tests:** `generator:` keys other than `lorem` (name, email,
+  address, company, occupation, …) emit genuine-looking strings via *mimesis*,
+  seeded from the feature's own RNG so the same `(spec_hash, seed)` reproduces
+  byte-identical text; an unknown `generator` or `locale` is rejected at
+  validation; a non-`en` `locale` changes the output.
+- **Files under test:** `src/datadoom/engine/dist/providers.py`,
+  `pipeline.py`, `spec/validate.py`.
+- **Test file:** `tests/unit/test_providers.py`;
+  `examples/people-realistic.datadoom.yaml` is also in the determinism gate
+  (`tests/determinism/test_determinism.py`).
+- **Command:**
+  ```powershell
+  datadoom run examples/people-realistic.datadoom.yaml --seed 42 --out .tmp_people
+  datadoom verify examples/people-realistic.datadoom.yaml --seed 42
+  ```
+- **Expected:** `data.csv` has real-looking `full_name`/`email`/`company`
+  values, the `german_city` column holds German place names (locale `de`), and
+  `verify` reports the run is reproducible (identical checksum on the pinned
+  mimesis version).
+
 ### G6 — Hashing discrimination (TH.6)
 - **What it tests:** changing a param value → **different** `spec_hash`;
   reordering `categories` (semantic array order) → **different** hash. (Today all
@@ -719,6 +740,175 @@ open `http://127.0.0.1:8000/`.
 
 ---
 
+## Group M — Failure injection (Phase 3)
+
+The pipeline gains a `failure_injection` stage: the clean baseline is captured,
+then the spec's ordered `failures` corrupt a *copy* (each from `RNG(failure:i)`).
+The clean variant is always preserved; the injected variant ships as
+`data.injected.csv` when `export.versions` includes `injected`. Automated in
+`tests/unit/test_failure.py`.
+
+### M0 — Run the failure unit tests
+- **What it tests:** every mode's behavior (rate accuracy, MAR/MNAR
+  driver/value dependence, label flip-to-different-class, feature-noise std,
+  drift schedule, covariate moment-match, leakage correlation), the
+  clean-baseline guarantee, injected determinism, and per-mode validation.
+- **Run:**
+  ```powershell
+  pytest tests/unit/test_failure.py -q
+  ```
+- **Expected:** `26 passed`.
+
+### M0b — Critical mathematical audit (parameter recovery)
+- **What it tests:** the math, not just the shape. Generates at n=20k and
+  **recovers each mechanism's parameters from the realized frame** vs exact or
+  asymptotic theory — the P3 analogue of `test_dataset_audit.py`:
+  MAR/MNAR logistic-slope recovery (IRLS) + calibrated rate; categorical
+  reassignment is a *uniform* transition matrix (off-diagonal = p/(k−1)); boolean
+  flip is class-symmetric with marginal `q(1−p)+(1−q)p`; feature-noise ε is
+  KS-Gaussian with the right σ and independent of x; **drift** is an exact linear
+  ramp (≈1e-14); **covariate_shift** hits the target mean/std to 1e-6; **leakage**
+  correlation equals the closed form `1/√(1+η²)`.
+- **Run:**
+  ```powershell
+  pytest tests/unit/test_failure_audit.py -q
+  ```
+- **Expected:** `14 passed`. A sign error, a miscalibrated intercept, or a biased
+  reassignment would fail here even though the loose checks in **M0** still pass.
+
+### M1 — Generate clean + injected variants  (P3 engine gate)
+- **What it tests:** the end-to-end stage writes both variants; the clean
+  baseline carries no injected missingness; the injected variant does.
+- **Run:**
+  ```powershell
+  datadoom run examples/failure-fraud.datadoom.yaml --seed 42 --out .tmp_fail
+  ```
+- **Expected:** three artifacts listed — `data.csv` (clean), `data.injected.csv`,
+  and `metadata.json` — and `written to .tmp_fail`. The clean `data.csv` has no
+  blank cells; `data.injected.csv` has blanks in `income`/`age`, a flipped share
+  of `is_fraud`, and an extra `fraud_score` leakage column not present in the
+  clean file.
+
+### M2 — Inspect the realized failure effects
+- **What it tests:** each mode's diff summary matches what landed in the frame.
+- **Run:**
+  ```powershell
+  python -c "from datadoom.engine import load_spec, generate; r=generate(load_spec('examples/failure-fraud.datadoom.yaml'), seed=42); c,i=r.frame,r.injected; print('clean NaN total      =', int(c.isna().sum().sum())); print('injected income NaN  = %.3f'%i['income'].isna().mean()); print('injected age NaN     = %.3f'%i['age'].isna().mean()); print('is_fraud flipped     = %.3f'%(c['is_fraud'].to_numpy()!=i['is_fraud'].to_numpy()).mean()); print('leakage corr (inj)   = %.3f'%__import__('numpy').corrcoef(i['fraud_score'], i['is_fraud'].to_numpy(float))[0,1]); [print(' diff:', m['type'], {k:v for k,v in m.items() if k in ('realized_rate','flipped_fraction','realized_noise_std','total_shift','realized_correlation')}) for m in r.report.failures['modes']]"
+  ```
+- **Expected:** clean NaN total `0`; injected `income` NaN ≈ 0.12 and `age` NaN
+  ≈ 0.05; `is_fraud` flipped ≈ 0.03; leakage correlation ≈ 0.99 against the
+  **injected** label (the proxy is planted *after* label noise, so it tracks the
+  already-corrupted label); and each diff summary's realized stat ≈ its requested
+  knob.
+
+### M3 — Both variants are byte-stable
+- **What it tests:** the injected corruption is reproducible on the pinned path.
+- **Run:**
+  ```powershell
+  datadoom verify examples/failure-fraud.datadoom.yaml --seed 42
+  pytest "tests/determinism/test_determinism.py::test_injected_variant_is_byte_stable" -q
+  ```
+- **Expected:** `OK reproducible` (clean `data.csv` checksum) and `1 passed`
+  (`data.injected.csv` identical across two runs).
+
+### M4 — Validation rejects malformed failures
+- **What it tests:** unknown types and per-mode field/type/reference errors are
+  caught with a precise `locator`.
+- **Run:**
+  ```powershell
+  python -c "from datadoom.engine import parse_spec; from datadoom.engine.errors import SpecValidationError; bad={'datadoom_version':'1','name':'bad','rows':10,'features':{'c':{'type':'categorical','categories':['a','b']}},'failures':[{'type':'label_noise','column':'c','rate':2.0}]}
+  try:
+      parse_spec(bad)
+  except SpecValidationError as e:
+      print('raised:', type(e).__name__, '->', e.locator)"
+  ```
+- **Expected:** `raised: SpecValidationError -> failures[0].rate` (rate out of
+  `[0,1]`). The 12 parametrized cases in **M0** cover the rest — unknown type
+  (`failures[0].type`), wrong column type, bad driver, missing schedule kind,
+  empty covariate target, and `into == target`.
+
+---
+
+## Group N — Web Failure Configurator + Comparison (Phase 3)
+
+The Canvas gains a third **Failures** view to author the corruption pipeline, and
+Results gains a **Comparison** tab. Build the SPA first (Group I, **I1**:
+`npm install && npm run build` in `frontend/`), then `datadoom serve` and open
+`http://127.0.0.1:8000/`.
+
+### N1 — Author a failure pipeline  (P3 exit gate)
+- **What it tests:** adding/ordering/configuring failures and generating both
+  variants.
+- **Steps:** open a dataset with a numeric and a boolean column (e.g. `x` numeric
+  + `flag` boolean). Switch the toolbar toggle to **Failures**. Click **Add
+  failure** → pick **MNAR** (Missingness); in the inspector set its column to `x`
+  and the rate slider to ~20%. Add **Label noise** on `flag`, then **Target
+  leakage** with target `flag` → planted column `leak`. Reorder with the ↑/↓
+  handles. Confirm the **Export the corrupted variant** toggle is on. Press
+  **Generate**.
+- **Expected:** each step shows a live impact chip (e.g. MNAR `≈… rows`, leakage
+  `corr ≈ 0.999`); the green banner promises the clean baseline is preserved; the
+  Failures tab shows a count badge; the run completes.
+
+### N2 — Inspector controls & live impact
+- **What it tests:** the type-aware controls and the honest estimate.
+- **Steps:** select each failure step and exercise its controls — sliders
+  (rate/strength/noise), column/driver selects, the drift schedule, covariate
+  target moments, MCAR multi-column chips.
+- **Expected:** the **Estimated impact** card updates as you tune; the math line
+  matches the mechanism (e.g. leakage shows `corr = 1/√(1+noise²)`); an invalid
+  config (e.g. no column picked) shows an inline amber warning and a ⚠ on the card.
+
+### N3 — Comparison tab: realized effects
+- **What it tests:** the authoritative per-mode diffs from the run report.
+- **Steps:** from the completed run, open **Results → Comparison**.
+- **Expected:** summary pull-stats (failure modes, % cells missing, columns
+  affected, +leakage columns); one card per failure showing its **realized**
+  effect (MNAR missing-rate bar vs target, label flip %, leakage correlation
+  gauge, drift total-shift + ramp, covariate before→after moments). These are
+  measured by the engine, not estimates.
+
+### N4 — Comparison tab: clean vs injected diff
+- **What it tests:** the cell-level and distribution comparison.
+- **Steps:** scroll the Comparison tab; toggle **Changed rows only**.
+- **Expected:** distribution overlays (clean grey vs injected violet) for any
+  drifted/shifted/noised numeric column; a diff table where nullified cells show
+  **∅** (red), changed values are amber (hover shows the clean value), and the
+  planted leakage column (★) is violet. The clean **Data Preview** tab still shows
+  the uncorrupted data.
+
+---
+
+## Group O — Web Generation Overview + realistic generators (Enhancement)
+
+### O1 — Generation Overview dashboard
+- **What it tests:** the **Overview** tab (the new default on the Results page)
+  renders the at-a-glance summary from the run's metadata.
+- **Files under test:** `frontend/src/components/OverviewView.tsx`,
+  `pages/Results.tsx`.
+- **Steps:** open any completed run's Results; the **Overview** tab is selected
+  first.
+- **Expected:** headline numerals (rows, columns, compliance %, seed; plus
+  *Failure modes* when failures were injected); a **donut** of column-type
+  composition with a colour legend; a **distribution-families** bar list; an
+  **artifacts** table (format / version / human-readable size / short SHA-256).
+  For a causal run, a **causal-structure** card (edges / derived cols /
+  interventions); for a failure run, a **failure-by-mode** bar list.
+
+### O2 — Author a realistic text column
+- **What it tests:** the Canvas Inspector can author mimesis-backed text
+  columns, and the locale control appears only for realistic generators.
+- **Files under test:** `frontend/src/components/Inspector.tsx`,
+  `lib/types.ts`, `lib/summary.ts`.
+- **Steps:** in the Canvas, add/select a **text** column; in the Inspector open
+  the **Generator** dropdown and pick e.g. `email` (People group). Generate.
+- **Expected:** picking a non-`lorem` generator swaps the *min/max tokens*
+  inputs for a **Locale** select; `lorem` shows the token inputs. The generated
+  `email` column holds genuine-looking addresses, and re-running the same
+  spec + seed reproduces identical values (see **G5b** for the engine guarantee).
+
+---
+
 ## Appendix — One-shot "is everything healthy?" sweep
 
 With the venv activated:
@@ -729,12 +919,15 @@ cd "D:\Hack Forge"
 
 ruff check src tests        # A1  -> All checks passed!
 lint-imports               # A2  -> 3 kept, 0 broken
-mypy                       # A3  -> Success: no issues found in 60 source files
-pytest                     # B0  -> 123 passed
-datadoom verify examples/tabular-basic.datadoom.yaml --seed 7   # C4 -> OK reproducible
-datadoom verify examples/causal-fraud.datadoom.yaml --seed 42   # J1 -> OK reproducible
+mypy                       # A3  -> Success: no issues found in 67 source files
+pytest                     # B0  -> 198 passed
+datadoom verify examples/tabular-basic.datadoom.yaml --seed 7      # C4 -> OK reproducible
+datadoom verify examples/causal-fraud.datadoom.yaml --seed 42      # J1 -> OK reproducible
+datadoom verify examples/failure-fraud.datadoom.yaml --seed 42     # M3 -> OK reproducible
+datadoom verify examples/people-realistic.datadoom.yaml --seed 42  # G5b -> OK reproducible
 ```
 
-If all five are green, Phase 0, the Phase-1 server/web tests, **and** the Phase-2
-causal engine are healthy. For the in-browser P1 exit gate, build the SPA (I1)
-and walk the loop (I2–I3); for the P2 engine gate, run Group **J**.
+If all are green, Phase 0, the Phase-1 server/web tests, the Phase-2 causal
+engine, **and** the Phase-3 failure engine are healthy. For the in-browser P1
+exit gate, build the SPA (I1) and walk the loop (I2–I3); for the P2 engine gate,
+run Group **J**; for the P3 engine gate, run Group **M**.

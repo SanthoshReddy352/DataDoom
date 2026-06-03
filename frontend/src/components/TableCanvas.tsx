@@ -2,11 +2,12 @@ import { GripVertical, Maximize2, Plus, Trash2, ZoomIn, ZoomOut } from "lucide-r
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "@/lib/clsx";
 import { TypeChip } from "./ui";
+import { FailureBadges } from "./FailureBadges";
 import { causalSettings, featureSettings, type SettingRow } from "@/lib/summary";
 import { getCausal } from "@/lib/causal";
 import { previewNumeric } from "@/lib/sampling";
 import { loadLayout, saveLayout } from "@/lib/viewLayout";
-import type { Feature, Spec } from "@/lib/types";
+import type { Failure, Feature, Spec } from "@/lib/types";
 
 const DEFAULT_W = 212;
 const MIN_W = 132;
@@ -196,6 +197,7 @@ export function TableCanvas({
               width={widthOf(name)}
               feature={spec.features[name]}
               rows={[...featureSettings(spec.features[name]), ...causalSettings(causal, name)]}
+              failures={spec.failures}
               preview={showPreview ? previews[i] : null}
               selected={selected === name}
               dragging={dragIndex === i}
@@ -264,6 +266,7 @@ function ColumnHeader({
   width,
   feature,
   rows,
+  failures,
   preview,
   selected,
   dragging,
@@ -283,6 +286,7 @@ function ColumnHeader({
   width: number;
   feature: Feature;
   rows: SettingRow[];
+  failures?: Failure[];
   preview: string[] | null;
   selected: boolean;
   dragging: boolean;
@@ -339,6 +343,7 @@ function ColumnHeader({
         </div>
         <div className="px-2.5 pb-2 pt-1.5">
           <TypeChip type={feature.type} />
+          <FailureBadges failures={failures} column={name} className="mt-1.5" />
           <dl className="mt-2 space-y-1">
             {rows.map((s, i) => (
               <div key={i} className="flex items-start justify-between gap-2 text-[11px] leading-snug">

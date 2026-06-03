@@ -97,7 +97,7 @@ class WorkerPool:
                 abs_path = out_dir / art.path
                 arts.add(
                     run_id=run_id,
-                    version="clean",
+                    version=art.version,
                     fmt=art.format,
                     storage_uri=self.artifacts.to_uri(abs_path),
                     checksum_sha256=art.checksum_sha256,

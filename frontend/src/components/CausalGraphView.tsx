@@ -13,22 +13,30 @@ import ReactFlow, {
 import "reactflow/dist/style.css";
 import { Crosshair } from "lucide-react";
 import { topoLayers } from "@/lib/causal";
-import { edgeFnLabel, featureSettings, type SettingRow } from "@/lib/summary";
+import { edgeFnLabel, edgeParamRows, featureSettings, type SettingRow } from "@/lib/summary";
+import { loadLayout } from "@/lib/viewLayout";
 import { TypeChip } from "./ui";
-import type { CausalTruth, Spec } from "@/lib/types";
+import { FailureBadges } from "./FailureBadges";
+import type { Failure, CausalTruth, Spec } from "@/lib/types";
+
+type SavedNode = { x: number; y: number; width?: number; height?: number };
 
 interface ViewNodeData {
   label: string;
   ftype?: string;
+  derived: boolean;
   intervened: boolean;
   rows: SettingRow[];
+  failures?: Failure[];
 }
 
+// Mirrors the editor's FeatureNode (read-only): same header/body/scroll structure
+// so a node at the same width/height renders identically.
 function ViewNode({ data }: NodeProps<ViewNodeData>) {
   return (
-    <div className="rounded-card border border-border bg-surface-1 shadow-card" style={{ width: 196 }}>
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-card border border-border bg-surface-1 shadow-card">
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
-      <div className="flex items-center gap-1.5 border-b border-border px-2.5 py-1.5">
+      <div className="flex items-center gap-1.5 border-b border-border bg-surface-2 px-2.5 py-1.5">
         <span className="min-w-0 flex-1 truncate font-display text-sm font-semibold tracking-tight text-text">
           {data.label}
         </span>
@@ -38,17 +46,22 @@ function ViewNode({ data }: NodeProps<ViewNodeData>) {
           </span>
         )}
       </div>
-      <div className="px-2.5 py-2">
-        {data.ftype && <TypeChip type={data.ftype} />}
+      <div className="min-h-0 flex-1 overflow-auto px-2.5 py-2">
+        <div className="flex items-center gap-2">
+          {data.ftype && <TypeChip type={data.ftype} />}
+          <span className="text-[10px] uppercase tracking-wide text-text-faint">
+            {data.derived ? "derived" : "root"}
+          </span>
+        </div>
+        <FailureBadges failures={data.failures} column={data.label} className="mt-1.5" />
         {data.rows.length > 0 && (
-          <dl className={data.ftype ? "mt-1.5 space-y-0.5" : "space-y-0.5"}>
+          <dl className="mt-1.5 space-y-0.5">
             {data.rows.map((s, i) => (
-              <div key={i} className="flex items-baseline justify-between gap-2 text-[11px]">
+              <div key={i} className="flex items-start justify-between gap-2 text-[11px] leading-snug">
                 <dt className="shrink-0 text-text-faint">{s.label}</dt>
                 <dd
-                  className="truncate text-right font-mono"
+                  className="break-words text-right font-mono"
                   style={{ color: s.tone === "accent" ? "var(--primary)" : "var(--text-muted)" }}
-                  title={s.value}
                 >
                   {s.value}
                 </dd>
@@ -67,10 +80,14 @@ const nodeTypes = { view: ViewNode };
 export function CausalGraphView({
   truth,
   spec,
+  datasetId,
+  runId,
   empirical,
 }: {
   truth: CausalTruth;
   spec?: Spec | null;
+  datasetId?: string;
+  runId?: string;
   empirical?: Record<string, { mean?: number; std?: number }>;
 }) {
   const names = useMemo(() => {
@@ -84,6 +101,12 @@ export function CausalGraphView({
   }, [truth]);
 
   const nodes: Node<ViewNodeData>[] = useMemo(() => {
+    // The arrangement frozen for *this run* at generation time (positions +
+    // widths), so editing the Canvas graph afterwards never changes a past run's
+    // view. Falls back to the dataset's live layout (older runs without a
+    // snapshot), then to a topological layout (e.g. a CLI-authored spec).
+    const datasetLayout = loadLayout<Record<string, SavedNode>>(datasetId, "graph-nodes", {});
+    const saved = loadLayout<Record<string, SavedNode>>(runId, "graph-nodes", datasetLayout);
     const layers = topoLayers(
       names,
       truth.edges.map((e) => ({ from: e.from, to: e.to, fn: e.fn })),
@@ -94,13 +117,12 @@ export function CausalGraphView({
       const layer = layers[name] ?? 0;
       const row = perLayer[layer] ?? 0;
       perLayer[layer] = row + 1;
+      const s = saved[name];
 
       const feat = spec?.features[name];
       const rows: SettingRow[] = [];
       if (feat) featureSettings(feat).forEach((r) => rows.push(r));
-      for (const e of incoming(name)) {
-        rows.push({ label: `← ${e.from}`, value: edgeFnLabel(e), tone: "accent" });
-      }
+      for (const e of incoming(name)) edgeParamRows(e).forEach((r) => rows.push(r));
       const emp = empirical?.[name];
       if (emp && (emp.mean != null || emp.std != null)) {
         rows.push({
@@ -109,20 +131,26 @@ export function CausalGraphView({
         });
       }
 
+      const width = s?.width ?? 216;
       return {
         id: name,
         type: "view",
-        position: { x: layer * 280 + 24, y: row * 176 + 24 },
+        position: s ? { x: s.x, y: s.y } : { x: layer * 300 + 24, y: row * 184 + 24 },
+        width: s?.width,
+        // Height auto (content-driven) — same as the editor, so every row shows.
+        style: { width },
         data: {
           label: name,
           ftype: feat?.type,
+          derived: incoming(name).length > 0,
           intervened: name in (truth.interventions ?? {}),
-          rows: rows.slice(0, 7),
+          rows,
+          failures: spec?.failures,
         },
         draggable: false,
       };
     });
-  }, [names, truth, spec, empirical]);
+  }, [names, truth, spec, empirical, datasetId, runId]);
 
   const edges: Edge[] = useMemo(
     () =>

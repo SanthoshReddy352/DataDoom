@@ -27,7 +27,7 @@ export function Button({
   return (
     <button
       className={clsx(
-        "inline-flex items-center justify-center gap-2 rounded-control px-3.5 py-2 text-sm font-medium",
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control px-3.5 py-2 text-sm font-medium",
         "transition-all duration-150 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
         "disabled:opacity-50 disabled:pointer-events-none",
         VARIANTS[variant],
@@ -92,10 +92,12 @@ export function Menu({
   trigger,
   children,
   align = "right",
+  fullWidth = false,
 }: {
   trigger: (props: { open: boolean; toggle: () => void }) => ReactNode;
   children: (close: () => void) => ReactNode;
   align?: "left" | "right";
+  fullWidth?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -119,21 +121,27 @@ export function Menu({
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    const onReflow = () => setOpen(false); // fixed menu would detach on scroll/resize
+    // A fixed menu detaches from its trigger when the *page* scrolls, so close on
+    // an outside scroll — but NOT when the user scrolls within the menu itself.
+    const onScroll = (e: Event) => {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const onResize = () => setOpen(false);
     window.addEventListener("mousedown", onDown);
     window.addEventListener("keydown", onKey);
-    window.addEventListener("resize", onReflow);
-    window.addEventListener("scroll", onReflow, true);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       window.removeEventListener("mousedown", onDown);
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onReflow);
-      window.removeEventListener("scroll", onReflow, true);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open]);
 
   return (
-    <div ref={triggerRef} className="relative inline-flex">
+    <div ref={triggerRef} className={clsx("relative", fullWidth ? "block w-full" : "inline-flex")}>
       {trigger({ open, toggle })}
       {open &&
         rect &&
@@ -179,17 +187,24 @@ export function MenuItem({
   onClick,
   danger,
   icon,
+  disabled,
+  title,
 }: {
   children: ReactNode;
   onClick: () => void;
   danger?: boolean;
   icon?: ReactNode;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       className={clsx(
         "ring-focus flex w-full items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-left text-sm transition-colors",
+        "disabled:pointer-events-none disabled:opacity-40",
         danger
           ? "text-hazard hover:bg-hazard-tint"
           : "text-text-muted hover:bg-surface-2 hover:text-text",
