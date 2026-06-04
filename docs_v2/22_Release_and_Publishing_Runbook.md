@@ -85,6 +85,20 @@ is tag-triggered: publishing is **tokenless** via PyPI Trusted Publishing (OIDC)
    build **provenance** (see §4), creates the GitHub Release, and publishes to
    PyPI via OIDC. No token needed.
 
+> **PyPI versions are immutable.** Every release must use a **new** version in
+> `src/datadoom/version.py` — you cannot re-upload an existing one. The publish
+> step sets `skip-existing: true`, so a *re-run* of an already-published version
+> succeeds as a no-op (instead of the `400 File already exists` error) — but to
+> ship new content you must bump the version. `pip install datadoom` ignores
+> `.devN` pre-releases unless they are the only versions available, so cut a
+> non-dev version (e.g. `0.1.0`) for the first public release.
+
+> **User reports `datadoom serve` says it needs `[server]` even after installing
+> it?** That's a *stale local install*, not a packaging bug — pip sees the version
+> "already satisfied" and skips the extra's deps. Tell them:
+> `pip install --upgrade --force-reinstall --no-cache-dir "datadoom[server]"`.
+> (The published wheel does carry the `server` extra and the bundled web Canvas.)
+
 **Manual fallback (if not yet automated):**
 
 ```bash
@@ -144,9 +158,9 @@ There is intentionally **no private key checked into or required by the repo**.
 
 ---
 
-## 5. Reproducibility & CI badges 🟡 pending (Task 19 — deliverable C)
+## 5. Reproducibility & CI badges 🟢 ready
 
-The README badges (CI status, reproducibility matrix) point at the existing
+The README badges (CI, Reproducibility Matrix, Docs) point at the existing
 workflows and need no setup beyond the workflows running at least once on `main`.
 The repro matrix pins numpy in its CI cells so the golden-checksum gate actually
 asserts (rather than skips); see

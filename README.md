@@ -47,10 +47,45 @@ datadoom verify examples/causal-fraud.datadoom.yaml --seed 42 --against out/
 
 # start from a built-in domain template
 datadoom template use fraud-detection --out my.datadoom.yaml
-
-# launch the web Canvas (needs the [server] extra)
-datadoom serve
 ```
+
+## Web UI (Canvas)
+
+The web Canvas — design schemas, wire causal graphs, configure difficulty/failures,
+generate with a live tracker, preview/compare/export — ships **prebuilt inside the
+package** (no Node toolchain needed). There are two ways to run it.
+
+### Option A — pip + `datadoom serve`
+
+```bash
+pip install "datadoom[server]"   # the [server] extra adds FastAPI/uvicorn
+datadoom serve                   # serves the API + Canvas on http://127.0.0.1:8000
+```
+
+Then open <http://127.0.0.1:8000> in your browser. `datadoom serve` is what starts
+the UI — installing the package alone does not run a server.
+
+> **Hitting `The web server needs extra deps … pip install 'datadoom[server]'`
+> even after installing it?** You almost certainly have an older `datadoom` already
+> installed, so pip reports "already satisfied" and never pulls the `[server]`
+> dependencies. Force a clean reinstall:
+> ```bash
+> pip install --upgrade --force-reinstall --no-cache-dir "datadoom[server]"
+> ```
+
+### Option B — Docker (UI starts automatically)
+
+The image's entrypoint **is** `datadoom serve`, so the Canvas comes up as soon as
+the container runs — you do **not** run any extra command.
+
+```bash
+# pull the published image (or `docker build -t datadoom:local .` from a clone)
+docker run --rm -p 8000:8000 -v datadoom-data:/data \
+  ghcr.io/santhoshreddy352/datadoom:latest
+```
+
+Open <http://localhost:8000>. The `-v datadoom-data:/data` volume persists your
+datasets/runs across restarts; the server binds `0.0.0.0:8000` inside the container.
 
 ## Development
 

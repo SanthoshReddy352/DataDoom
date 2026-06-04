@@ -111,6 +111,12 @@ jobs:
           name: dist
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # PyPI versions are immutable: a re-run (or a tag pointing at an already
+          # published version) would otherwise fail with "File already exists".
+          # Skip files already on PyPI so re-runs are idempotent; publishing NEW
+          # content still requires bumping src/datadoom/version.py.
+          skip-existing: true
 
   docker:
     name: build + push image (GHCR)
