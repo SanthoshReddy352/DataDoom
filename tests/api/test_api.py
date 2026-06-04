@@ -26,10 +26,48 @@ def test_health_and_version(client: TestClient) -> None:
     assert "version" in v and v["datadoom_version"] == "1"
 
 
+def test_spec_reference_manifest(client: TestClient) -> None:
+    cap = client.get("/api/spec-reference").json()
+    assert set(cap["feature_types"]) >= {"numeric", "timeseries"}
+    assert {d["name"] for d in cap["distributions"]} >= {"normal", "poisson"}
+    assert {f["type"] for f in cap["failure_modes"]} >= {"mcar", "leakage"}
+
+
 def test_validate_ok(client: TestClient, sample_spec: dict) -> None:
     r = client.post("/api/specs/validate", json=sample_spec)
     assert r.status_code == 200
     assert r.json()["valid"] is True and len(r.json()["spec_hash"]) == 64
+
+
+def test_parse_yaml_text(client: TestClient) -> None:
+    yaml_text = (
+        'datadoom_version: "1"\n'
+        "name: from-yaml\n"
+        "rows: 100\n"
+        "features:\n"
+        "  age:\n"
+        "    type: numeric\n"
+        "    dist: normal\n"
+        "    params: { mean: 40, std: 10 }\n"
+    )
+    r = client.post("/api/specs/parse", json={"text": yaml_text})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["valid"] is True and len(body["spec_hash"]) == 64
+    assert body["spec"]["name"] == "from-yaml" and "age" in body["spec"]["features"]
+
+
+def test_parse_yaml_syntax_error_has_locator(client: TestClient) -> None:
+    r = client.post("/api/specs/parse", json={"text": "name: x\n  bad: : indent"})
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "validation_error"
+
+
+def test_parse_yaml_validation_error_has_locator(client: TestClient) -> None:
+    bad = 'datadoom_version: "1"\nname: x\nrows: 1\nfeatures:\n  a:\n    type: numeric\n    dist: nope\n'
+    r = client.post("/api/specs/parse", json={"text": bad})
+    assert r.status_code == 422
+    assert r.json()["error"]["locator"] == "features.a.dist"
 
 
 def test_validate_error_has_locator(client: TestClient, sample_spec: dict) -> None:
@@ -113,6 +151,52 @@ def test_run_generates_artifacts_and_report(client: TestClient, sample_spec: dic
     assert report["correlation"] is not None  # two numeric features
 
 
+def test_resolved_spec_is_locked_and_downloadable(client: TestClient, sample_spec: dict) -> None:
+    """Each generation locks its resolved spec: it's a tracked YAML artifact, the
+    run summary carries the spec_hash, and the spec.yaml endpoint serves a
+    parseable spec with the seed baked in (version-control reproducibility)."""
+    import yaml
+
+    did = client.post("/api/datasets", json={"name": "lock", "spec": sample_spec}).json()["dataset_id"]
+    run_id = client.post(f"/api/datasets/{did}/runs", json={"seed": 42}).json()["run_id"]
+    assert _wait_run(client, run_id)["status"] == "completed"
+
+    # The resolved spec is a first-class, checksummed artifact.
+    artifacts = client.get(f"/api/runs/{run_id}/artifacts").json()
+    spec_art = next((a for a in artifacts if a["version"] == "spec"), None)
+    assert spec_art is not None and spec_art["format"] == "yaml"
+    assert len(spec_art["checksum_sha256"]) == 64
+
+    # The run summary exposes the spec_hash as the version-control anchor.
+    runs = client.get(f"/api/datasets/{did}/runs").json()
+    summary = next(r for r in runs if r["run_id"] == run_id)
+    assert summary["spec_hash"] and len(summary["spec_hash"]) == 64
+
+    # The dedicated endpoint downloads a parseable spec with the resolved seed.
+    resp = client.get(f"/api/runs/{run_id}/spec.yaml")
+    assert resp.status_code == 200
+    body = yaml.safe_load(resp.text)
+    assert body["seed"] == 42  # the resolved seed is baked in
+    assert set(body["features"]) == set(sample_spec["features"])  # canonicalized, same columns
+
+
+def test_difficulty_report_round_trips(client: TestClient, sample_spec: dict) -> None:
+    """A difficulty target survives the full server path: run → store → report
+    endpoint carries the achieved metric + band (P4)."""
+    spec = dict(sample_spec)
+    spec["difficulty"] = {"target": "kaggle", "label": "is_fraud", "probe": "logreg", "max_iters": 6}
+    did = client.post("/api/datasets", json={"name": "diff", "spec": spec}).json()["dataset_id"]
+    run_id = client.post(f"/api/datasets/{did}/runs", json={"seed": 42}).json()["run_id"]
+    assert _wait_run(client, run_id)["status"] == "completed"
+
+    diff = client.get(f"/api/runs/{run_id}/report").json()["difficulty"]
+    assert diff is not None
+    assert diff["metric_name"] == "auroc"
+    assert diff["target"]["band"] == [0.62, 0.72]
+    assert isinstance(diff["band_met"], bool)
+    assert isinstance(diff["trace"], list) and len(diff["trace"]) >= 1
+
+
 def test_run_idempotency_key_replays(client: TestClient, sample_spec: dict) -> None:
     did = client.post("/api/datasets", json={"name": "idem", "spec": sample_spec}).json()["dataset_id"]
     headers = {"Idempotency-Key": "abc-123"}
@@ -157,3 +241,34 @@ def test_websocket_streams_stages_to_completed(client: TestClient, sample_spec: 
     assert "stage" in types
     assert terminal["type"] == "completed"
     assert "compliance_score" in terminal and "report_id" in terminal
+
+
+# --- templates + plugins (P5) -------------------------------------------------
+def test_list_templates(client: TestClient) -> None:
+    items = client.get("/api/templates").json()
+    assert len(items) >= 3
+    ids = {t["id"] for t in items}
+    assert {"fraud-detection", "customer-churn", "hospital-readmission"} <= ids
+
+
+def test_get_template_detail_and_404(client: TestClient) -> None:
+    detail = client.get("/api/templates/fraud-detection").json()
+    assert detail["domain"] == "Finance"
+    assert detail["spec"]["name"] == "transaction-fraud"
+    assert client.get("/api/templates/nope").status_code == 404
+
+
+def test_create_dataset_from_template(client: TestClient) -> None:
+    detail = client.get("/api/templates/hospital-readmission").json()
+    did = client.post(
+        "/api/datasets", json={"name": detail["name"], "spec": detail["spec"]}
+    ).json()["dataset_id"]
+    run_id = client.post(f"/api/datasets/{did}/runs", json={"seed": 2}).json()["run_id"]
+    run = _wait_run(client, run_id)
+    assert run["status"] == "completed"
+
+
+def test_list_plugins_over_http(client: TestClient) -> None:
+    items = client.get("/api/plugins").json()
+    assert len(items) == 24
+    assert any(p["name"] == "parquet" and p["kind"] == "exporter" for p in items)

@@ -13,6 +13,7 @@ from .errors import (
     SpecValidationError,
 )
 from .pipeline import RunContext, RunResult, generate, resolve_seed
+from .reference import build_capabilities
 from .reports import ReportBundle, build_report
 from .rng import RNGFactory
 from .spec import Spec, load_spec, parse_spec, validate_spec
@@ -24,6 +25,7 @@ __all__ = [
     "RunResult",
     "ReportBundle",
     "build_report",
+    "build_capabilities",
     "RNGFactory",
     "Spec",
     "load_spec",

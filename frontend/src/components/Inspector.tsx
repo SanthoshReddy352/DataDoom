@@ -8,7 +8,7 @@ import { previewNumeric } from "@/lib/sampling";
 import type { Feature } from "@/lib/types";
 import { TEXT_GENERATORS, TEXT_LOCALES } from "@/lib/types";
 
-const FEATURE_TYPES: Feature["type"][] = ["numeric", "categorical", "boolean", "datetime", "text"];
+const FEATURE_TYPES: Feature["type"][] = ["numeric", "categorical", "boolean", "datetime", "text", "timeseries"];
 
 export function Inspector({
   name,
@@ -58,12 +58,15 @@ export function Inspector({
         {feature.type === "boolean" && <BooleanControls f={feature} onChange={onChange} />}
         {feature.type === "datetime" && <DatetimeControls f={feature} onChange={onChange} />}
         {feature.type === "text" && <TextControls f={feature} onChange={onChange} />}
+        {feature.type === "timeseries" && <TimeseriesControls f={feature} onChange={onChange} />}
 
         {locatorError && (
           <div className="mt-4 rounded-control border border-hazard bg-hazard-tint px-3 py-2 text-xs text-hazard">
             {locatorError}
           </div>
         )}
+
+        <LatentToggle feature={feature} onChange={onChange} />
       </div>
 
       <div className="border-t border-border p-4">
@@ -134,6 +137,28 @@ function NameEditor({
       />
       {err && <p className="mt-1 text-xs text-hazard">{err}</p>}
     </div>
+  );
+}
+
+/** Latent (`emit: false`) toggle — applies to any feature type. */
+function LatentToggle({ feature, onChange }: { feature: Feature; onChange: (f: Feature) => void }) {
+  const latent = feature.emit === false;
+  return (
+    <label className="mt-5 flex cursor-pointer items-start gap-2.5 rounded-control border border-border bg-surface-2 px-3 py-2.5">
+      <input
+        type="checkbox"
+        checked={latent}
+        onChange={(e) => onChange({ ...feature, emit: e.target.checked ? false : undefined })}
+        className="mt-0.5 h-4 w-4 accent-[var(--primary)]"
+      />
+      <span className="text-xs">
+        <span className="font-medium text-text">Latent (not exported)</span>
+        <span className="mt-0.5 block leading-snug text-text-faint">
+          Drives sampling / the causal graph but is <strong>not shipped</strong> — excluded from the data,
+          the difficulty probe, and compliance. Use for hidden confounders or a latent score behind a label.
+        </span>
+      </span>
+    </label>
   );
 }
 
@@ -418,6 +443,158 @@ function TextControls({
         Realistic generators emit genuine-looking values (names, emails, addresses…) via mimesis, seeded
         from this column's stream — so the same spec + seed still reproduces byte-identical data.
       </p>
+    </>
+  );
+}
+
+function TimeseriesControls({
+  f,
+  onChange,
+}: {
+  f: Extract<Feature, { type: "timeseries" }>;
+  onChange: (f: Feature) => void;
+}) {
+  const trend = f.trend ?? { slope: 0, intercept: 0 };
+  const seasons = f.seasonality ?? [];
+  const ar = f.ar ?? [];
+  const arSum = ar.reduce((a, b) => a + Math.abs(b), 0);
+
+  return (
+    <>
+      <p className="mb-3 text-xs italic text-text-faint">
+        An ordered series <span className="not-italic font-mono">Xt = trend + Σ seasonality + AR(p) + noise</span>{" "}
+        over the row index — row order is the time axis. May be a causal parent; never a target.
+      </p>
+
+      <Kicker>Trend</Kicker>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <Row label="slope (per row)">
+          <NumInput value={trend.slope} onChange={(n) => onChange({ ...f, trend: { ...trend, slope: n } })} />
+        </Row>
+        <Row label="intercept">
+          <NumInput value={trend.intercept} onChange={(n) => onChange({ ...f, trend: { ...trend, intercept: n } })} />
+        </Row>
+      </div>
+
+      <Kicker>Seasonality</Kicker>
+      <div className="mt-2 space-y-2">
+        {seasons.map((s, i) => (
+          <div key={i} className="rounded-control border border-border bg-surface-2 p-2">
+            <div className="grid grid-cols-3 gap-2">
+              <Row label="amplitude">
+                <NumInput
+                  value={s.amplitude}
+                  onChange={(n) => {
+                    const next = [...seasons];
+                    next[i] = { ...s, amplitude: n };
+                    onChange({ ...f, seasonality: next });
+                  }}
+                />
+              </Row>
+              <Row label="period">
+                <NumInput
+                  value={s.period}
+                  onChange={(n) => {
+                    const next = [...seasons];
+                    next[i] = { ...s, period: n };
+                    onChange({ ...f, seasonality: next });
+                  }}
+                />
+              </Row>
+              <Row label="phase">
+                <NumInput
+                  value={s.phase ?? 0}
+                  onChange={(n) => {
+                    const next = [...seasons];
+                    next[i] = { ...s, phase: n };
+                    onChange({ ...f, seasonality: next });
+                  }}
+                />
+              </Row>
+            </div>
+            <button
+              onClick={() => onChange({ ...f, seasonality: seasons.filter((_, j) => j !== i) })}
+              className="ring-focus inline-flex items-center gap-1 text-[11px] text-text-faint hover:text-hazard"
+            >
+              <X size={12} /> remove season
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => onChange({ ...f, seasonality: [...seasons, { amplitude: 1, period: 24, phase: 0 }] })}
+        className="ring-focus mt-2 inline-flex items-center gap-1 rounded text-xs font-medium text-primary hover:underline"
+      >
+        <Plus size={13} /> Add season
+      </button>
+
+      <div className="mt-4">
+        <Kicker>Autoregression (AR)</Kicker>
+        <div className="mt-2 space-y-1.5">
+          {ar.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="w-10 font-mono text-[11px] text-text-faint">φ{i + 1}</span>
+              <input
+                type="number"
+                value={c}
+                onChange={(e) => {
+                  const next = [...ar];
+                  next[i] = Number(e.target.value);
+                  onChange({ ...f, ar: next });
+                }}
+                className="ring-focus flex-1 rounded-control border border-border bg-surface-2 px-2 py-1 font-mono text-xs outline-none focus:border-primary"
+              />
+              <button
+                onClick={() => onChange({ ...f, ar: ar.filter((_, j) => j !== i) })}
+                className="ring-focus rounded text-text-faint hover:text-hazard"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => onChange({ ...f, ar: [...ar, 0.3] })}
+          className="ring-focus mt-2 inline-flex items-center gap-1 rounded text-xs font-medium text-primary hover:underline"
+        >
+          <Plus size={13} /> Add AR term
+        </button>
+        {ar.length > 0 && (
+          <p className={"mt-1.5 text-[11px] " + (arSum < 1 ? "text-text-faint" : "text-hazard")}>
+            Σ|φ| = {arSum.toFixed(2)} {arSum < 1 ? "(stationary ✓)" : "(must be < 1)"}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Row label="noise σ">
+          <NumInput value={f.noise_std ?? 1} onChange={(n) => onChange({ ...f, noise_std: n })} />
+        </Row>
+        <Row label="dtype">
+          <div className="mt-1 inline-flex rounded-control border border-border p-0.5">
+            {(["float", "int"] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => onChange({ ...f, dtype: d })}
+                className={
+                  "ring-focus rounded-[7px] px-3 py-1 text-xs " +
+                  ((f.dtype ?? "float") === d ? "bg-primary-tint text-primary" : "text-text-muted")
+                }
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </Row>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Row label="min (clamp)">
+          <NumInput value={f.min ?? undefined} onChange={(n) => onChange({ ...f, min: n })} />
+        </Row>
+        <Row label="max (clamp)">
+          <NumInput value={f.max ?? undefined} onChange={(n) => onChange({ ...f, max: n })} />
+        </Row>
+      </div>
     </>
   );
 }

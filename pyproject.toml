@@ -32,9 +32,27 @@ dependencies = [
     # to a minor line because, like numpy for numeric draws, a different version
     # can change the strings produced for a given seed (invariant #6).
     "mimesis>=19,<20",
+    # Baseline probe models for difficulty calibration (logreg/tree). The probe
+    # metric drives the adaptive loop's knob selection, so it is on the
+    # determinism-critical path: pinned to a minor line like numpy/mimesis
+    # because a different version could shift a near-boundary probe score and
+    # change which calibrated knob value (hence which bytes) a run lands on
+    # (invariant #6). Same-environment reproducibility is exact.
+    "scikit-learn>=1.4,<2",
 ]
 
 [project.optional-dependencies]
+# Parquet export (a large wheel — kept out of the light core). With it installed,
+# `export.formats: [parquet]` works; without it, a parquet run errors with an
+# actionable install hint. JSON/CSV export need no extra.
+parquet = ["pyarrow>=15,<19"]
+# Framework adapters (datadoom.adapters): turn a generated run into a torch /
+# tensorflow / HuggingFace dataset. These are heavyweight, so they are opt-in
+# extras — the pandas loader (`load_dataframe`) needs no extra. Each loader
+# lazy-imports its framework and errors with an install hint if it is absent.
+torch = ["torch>=2,<3"]
+tf = ["tensorflow>=2.13"]
+hf = ["datasets>=2.14"]
 # The web server (store + jobs + api). The pure engine + CLI work without these;
 # `datadoom serve` / the web Canvas require this extra (`pip install datadoom[server]`).
 server = [
@@ -45,6 +63,15 @@ server = [
     "websockets>=12",
     "python-multipart>=0.0.9",
 ]
+# Documentation site (mkdocs-material). Pure docs tooling — not needed to run
+# DataDoom. `pip install datadoom[docs]` then `mkdocs serve` / `mkdocs build`.
+# The include-markdown plugin lets the site embed the authoritative `docs_v2/`
+# sources directly, so the design docs stay the single source of truth.
+docs = [
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.5,<10",
+    "mkdocs-include-markdown-plugin>=6,<8",
+]
 dev = [
     "pytest>=8",
     "pytest-cov",
@@ -54,6 +81,8 @@ dev = [
     "import-linter>=2",
     "types-PyYAML",
     "httpx>=0.27",
+    # parquet export is exercised by the export tests
+    "pyarrow>=15,<19",
     # server deps are needed to run the api/store/jobs test suites
     "fastapi>=0.110,<1",
     "uvicorn[standard]>=0.29,<1",
@@ -73,11 +102,16 @@ Repository = "https://github.com/SanthoshReddy352/datadoom"
 [tool.hatch.version]
 path = "src/datadoom/version.py"
 
+[tool.hatch.build]
+# Force-include the compiled frontend and template data in EVERY build target.
+# These live under a gitignored path (webdist) / are data files, so without this
+# hatchling's VCS-based file selection would drop them — and because `python -m
+# build` builds the wheel *from the sdist*, the sdist must carry them too or the
+# wheel ends up without the web Canvas. Listing them here covers sdist + wheel.
+artifacts = ["src/datadoom/webdist/**", "src/datadoom/templates/*.yaml"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/datadoom"]
-# The compiled frontend (built from frontend/ into this dir) ships inside the wheel
-# so `pip install datadoom[server] && datadoom serve` needs no Node toolchain.
-artifacts = ["src/datadoom/webdist/**"]
 
 [tool.ruff]
 line-length = 100
@@ -102,7 +136,7 @@ warn_unused_ignores = true
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ["scipy.*", "pandas.*", "yaml", "networkx.*"]
+module = ["scipy.*", "pandas.*", "yaml", "networkx.*", "sklearn.*", "pyarrow.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -113,7 +147,13 @@ warn_unused_ignores = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# Perf-budget tests are wall-clock assertions, so they are deselected from the
+# default run (and CI quality gate) to stay non-flaky; run them explicitly with
+# `pytest -m perf`. The repro/CI jobs that want them opt in.
+addopts = "-q -m 'not perf'"
+markers = [
+    "perf: performance budget smoke (deselected by default; run with -m perf)",
+]
 
 [tool.importlinter]
 root_package = "datadoom"
@@ -130,6 +170,8 @@ forbidden_modules = [
     "datadoom.store",
     "datadoom.jobs",
     "datadoom.cli",
+    "datadoom.plugins",
+    "datadoom.adapters",
     "fastapi",
     "sqlalchemy",
     "uvicorn",
@@ -152,4 +194,32 @@ forbidden_modules = [
     "datadoom.api",
     "datadoom.jobs",
     "datadoom.cli",
+]
+
+[[tool.importlinter.contracts]]
+# plugins/ sits beside the engine and depends only on it (10 §4): it consumes the
+# engine ABCs and mutates the engine's registries; it must never reach "up".
+name = "plugins depend only on engine"
+type = "forbidden"
+source_modules = ["datadoom.plugins"]
+forbidden_modules = [
+    "datadoom.api",
+    "datadoom.store",
+    "datadoom.jobs",
+    "datadoom.cli",
+]
+
+[[tool.importlinter.contracts]]
+# adapters/ is a consumer convenience: it reads generated artifacts into pandas /
+# torch / tf / HF. It depends only on the engine (for types) and must not reach
+# "up" into the server/CLI layers.
+name = "adapters depend only on engine"
+type = "forbidden"
+source_modules = ["datadoom.adapters"]
+forbidden_modules = [
+    "datadoom.api",
+    "datadoom.store",
+    "datadoom.jobs",
+    "datadoom.cli",
+    "datadoom.plugins",
 ]

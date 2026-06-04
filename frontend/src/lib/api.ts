@@ -3,8 +3,11 @@ import type {
   Dataset,
   DatasetSummary,
   Estimate,
+  PluginInfo,
   Preview,
   Report,
+  TemplateDetail,
+  TemplateSummary,
   RunSummary,
   Spec,
   SpecDetail,
@@ -49,6 +52,11 @@ export const api = {
     }),
   estimate: (spec: Spec) =>
     request<Estimate>("/specs/estimate", { method: "POST", body: JSON.stringify(spec) }),
+  parseYaml: (text: string) =>
+    request<{ valid: boolean; spec_hash: string; spec: Spec }>("/specs/parse", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    }),
 
   // datasets
   listDatasets: (q?: string) =>
@@ -96,4 +104,12 @@ export const api = {
 
   downloadUrl: (artifactId: string) => `/api/artifacts/${artifactId}/download`,
   bundleUrl: (runId: string) => `/api/runs/${runId}/bundle`,
+  specYamlUrl: (runId: string) => `/api/runs/${runId}/spec.yaml`,
+
+  // plugins (ecosystem) — core built-ins + discovered plugins (09 §3)
+  listPlugins: () => request<PluginInfo[]>("/plugins"),
+
+  // templates — built-in domain starter specs (09 §4.6)
+  listTemplates: () => request<TemplateSummary[]>("/templates"),
+  getTemplate: (id: string) => request<TemplateDetail>(`/templates/${id}`),
 };

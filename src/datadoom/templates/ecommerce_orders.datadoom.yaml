@@ -1,0 +1,46 @@
+datadoom_version: "1"
+name: "ecommerce-orders"
+description: >
+  E-commerce orders starter — a fast, distribution-only table (no causal graph):
+  order value (heavy-ish lognormal), basket quantity, product category, channel,
+  order date and a return flag. Great for quickly populating a realistic-looking
+  orders dataset.
+seed: 31
+rows: 10000
+
+features:
+  order_value:
+    type: numeric
+    dist: lognormal
+    params: { mu: 3.8, sigma: 0.6 }
+    min: 0
+  quantity:
+    type: numeric
+    dist: poisson
+    params: { lam: 2.2 }
+    min: 1
+    dtype: int
+  category:
+    type: categorical
+    categories: [electronics, apparel, home, books, toys, grocery]
+    weights: [0.22, 0.26, 0.18, 0.1, 0.1, 0.14]
+  channel:
+    type: categorical
+    categories: [web, mobile, store]
+    weights: [0.45, 0.4, 0.15]
+  order_date:
+    type: datetime
+    start: "2023-01-01"
+    end: "2024-12-31"
+    granularity: day
+  returned:
+    type: boolean
+    rate: 0.08
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "A realistic orders table for quick prototyping (distribution-only)."
+  tags: [ecommerce, tabular, datetime]

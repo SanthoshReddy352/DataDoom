@@ -12,21 +12,28 @@ export function Toaster() {
   const toasts = useToasts((s) => s.toasts);
   const dismiss = useToasts((s) => s.dismiss);
   return (
-    <div className="pointer-events-none fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
+    <div
+      role="region"
+      aria-label="Notifications"
+      className="pointer-events-none fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2"
+    >
       {toasts.map((t) => {
         const { icon: Icon, dot } = TONE[t.tone];
         return (
           <div
             key={t.id}
+            role={t.tone === "error" ? "alert" : "status"}
+            aria-live={t.tone === "error" ? "assertive" : "polite"}
             className="pointer-events-auto flex animate-slide-up items-center gap-2.5 rounded-pill border border-border bg-surface-1 py-2 pl-3 pr-2 text-sm text-text shadow-pop"
           >
-            <Icon size={15} className={clsx("shrink-0", dot)} />
+            <Icon size={15} className={clsx("shrink-0", dot)} aria-hidden />
             <span>{t.message}</span>
             <button
               onClick={() => dismiss(t.id)}
+              aria-label="Dismiss notification"
               className="ring-focus rounded-full p-1 text-text-faint hover:text-text"
             >
-              <X size={13} />
+              <X size={13} aria-hidden />
             </button>
           </div>
         );

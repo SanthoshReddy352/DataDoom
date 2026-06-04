@@ -1,0 +1,124 @@
+datadoom_version: "1"
+name: "clinical-deterioration"
+description: >
+  HACKATHON — ICU clinical deterioration with a hidden confounder. A latent
+  illness `severity` (emit: false) is driven by age, comorbidity burden and
+  admission type, and severity in turn drives BOTH the observed vitals
+  (heart rate ↑, lactate ↑, systolic BP ↓) AND the `deterioration` label. Because
+  the true cause is unobserved, the vitals are only *proxies* — a textbook
+  latent-confounder problem. Calibrated to the 'advanced' baseline-AUROC band.
+  Realistic clinical missingness corrupts a copy: lactate is MNAR (extreme assay
+  values dropped), systolic BP is MAR (missing for older patients), heart-rate
+  telemetry is MCAR, and 2% of outcomes are mislabelled. `sex` is included but
+  carries no causal signal — a fairness/feature-selection check.
+seed: 202
+rows: 7000
+
+features:
+  patient_age:
+    type: numeric
+    dist: normal
+    params: { mean: 63, std: 17 }
+    min: 18
+    max: 100
+    dtype: int
+  sex:
+    type: categorical
+    categories: [female, male]
+    weights: [0.49, 0.51]
+  admission_type:
+    type: categorical
+    categories: [elective, urgent, emergency]
+    weights: [0.4, 0.35, 0.25]
+  num_comorbidities:
+    type: numeric
+    dist: poisson
+    params: { lam: 2.6 }
+    min: 0
+    dtype: int
+  severity:
+    type: numeric          # LATENT confounder — the true generative driver
+    dtype: float
+    emit: false            # not shipped; drives both vitals and outcome
+  heart_rate:
+    type: numeric          # derived: observed proxy of severity (bpm)
+    dtype: float
+    min: 0
+  lactate:
+    type: numeric          # derived: observed proxy of severity (mmol/L)
+    dtype: float
+    min: 0
+  systolic_bp:
+    type: numeric          # derived: observed proxy of severity (mmHg)
+    dtype: float
+    min: 0
+  deterioration:
+    type: boolean          # label (derived): logistic of severity
+
+causal:
+  edges:
+    # roots → latent severity
+    - { from: patient_age,       to: severity, fn: linear, weight: 0.025 }
+    - { from: num_comorbidities, to: severity, fn: linear, weight: 0.55 }
+    - { from: admission_type,    to: severity, fn: map,    mapping: { elective: -1.0, urgent: 0.5, emergency: 2.0 } }
+    # latent severity → observed vitals (reverse causation → confounding)
+    - { from: severity, to: heart_rate,  fn: linear, weight: 9.0,  bias: 78 }
+    - { from: severity, to: lactate,     fn: linear, weight: 0.6,  bias: 1.4 }
+    - { from: severity, to: systolic_bp, fn: linear, weight: -7.0, bias: 124 }
+    # latent severity → outcome
+    - { from: severity, to: deterioration, fn: logistic, weight: 1.2, bias: -5.5 }
+  noise:
+    severity: { dist: normal, params: { mean: 0, std: 0.5 } }
+    heart_rate:  { dist: normal, params: { mean: 0, std: 8 } }
+    lactate:     { dist: normal, params: { mean: 0, std: 0.4 } }
+    systolic_bp: { dist: normal, params: { mean: 0, std: 10 } }
+    deterioration: { dist: none }
+
+difficulty:
+  target: advanced          # baseline ROC-AUC calibrated into [0.72, 0.80]
+  label: deterioration
+  probe: logreg
+  max_iters: 10
+  knobs: [noise, label_noise]
+
+failures:
+  - type: mnar               # extreme lactate values not recorded
+    column: lactate
+    rate: 0.12
+    strength: 2.0
+  - type: mar                # BP missing more often for older patients
+    column: systolic_bp
+    driver: patient_age
+    rate: 0.10
+    strength: 2.0
+  - type: mcar               # random telemetry gaps in heart rate
+    columns: [heart_rate]
+    rate: 0.05
+  - type: label_noise        # 2% chart-coding errors
+    column: deterioration
+    rate: 0.02
+
+export:
+  formats: [csv]
+  versions: [clean, injected]
+  splits: { train: 0.8, test: 0.2 }
+
+meta:
+  level: hackathon
+  challenge:
+    title: "Early warning for clinical deterioration"
+    task: classification
+    target: deterioration
+    metric: ROC-AUC
+    difficulty: advanced
+    baseline_auroc_band: [0.72, 0.80]
+    train_test_split: "80 / 20"
+    hidden_structure: >
+      The true cause (severity) is latent. It drives the observed vitals AND the
+      outcome, so heart_rate / lactate / systolic_bp are correlated proxies, not
+      independent causes.
+    gotchas:
+      - "lactate is MNAR (extreme values missing) and systolic_bp is MAR (by age) — imputation choice matters."
+      - "sex carries no causal signal; including it should not help — watch for spurious importance."
+      - "Vitals are confounded proxies of a hidden severity, not independent predictors."
+  tags: [healthcare, clinical, causal, latent, confounder, difficulty, missingness, classification]

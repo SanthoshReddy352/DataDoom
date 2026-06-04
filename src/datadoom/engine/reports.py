@@ -8,10 +8,12 @@ honestly produce are populated:
 * ``correlation`` — Pearson matrix over numeric columns (cheap, honest).
 * ``mutual_information`` — pairwise MI (nats) over discretized columns (05 §7).
 * ``causal_truth`` — the true generating DAG + interventions (P2).
+* ``failures`` — per-mode realized diffs when failures were injected (P3).
+* ``difficulty`` — target band, achieved metric, probe, iterations, knobs (P4).
 * ``determinism`` — spec_hash, seed, per-namespace key digests, checksums.
 
-``difficulty`` (P4) and ``failures`` (P3) stay ``None`` until those engines land;
-the schema is stable so the UI is coherent from day one.
+Sections the engine cannot honestly produce for a given run stay ``None``; the
+schema is stable so the UI is coherent from day one.
 """
 
 from __future__ import annotations
@@ -24,10 +26,11 @@ import pandas as pd
 
 from .causal.execute import resolve_interventions
 from .dist import ComplianceReport
+from .profile import build_profile
 
 if TYPE_CHECKING:
     from .causal.graph import CausalDag
-    from .spec.models import CausalGraph
+    from .spec.models import CausalGraph, Spec
 
 # Columns with more distinct values than this are treated as free-text / id-like
 # and excluded from the mutual-information matrix (binning would be meaningless).
@@ -44,6 +47,7 @@ class ReportBundle:
     causal_truth: dict[str, Any] | None = None
     difficulty: dict[str, Any] | None = None
     failures: dict[str, Any] | None = None
+    profile: dict[str, Any] | None = None
     determinism: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -176,11 +180,19 @@ def build_report(
     compliance: ComplianceReport,
     frame: pd.DataFrame,
     determinism: dict[str, Any],
+    spec: Spec | None = None,
     causal: CausalGraph | None = None,
     causal_dag: CausalDag | None = None,
     failures: list[dict[str, Any]] | None = None,
+    injected: pd.DataFrame | None = None,
+    difficulty: dict[str, Any] | None = None,
 ) -> ReportBundle:
     """Assemble the report bundle from the realized frame and compliance pass."""
+    profile = (
+        build_profile(spec, frame, injected=injected, failure_diffs=failures)
+        if spec is not None
+        else None
+    )
     return ReportBundle(
         compliance_score=compliance.score,
         distribution=compliance.to_dict(),
@@ -188,5 +200,7 @@ def build_report(
         mutual_information=mutual_information_matrix(frame),
         causal_truth=causal_truth(causal, causal_dag),
         failures=failures_section(failures),
+        profile=profile,
+        difficulty=difficulty,
         determinism=determinism,
     )

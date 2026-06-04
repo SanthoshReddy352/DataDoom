@@ -3,6 +3,12 @@ name: Reproducibility Matrix
 # Proves the headline guarantee: on the pinned path, the same (spec_hash, seed)
 # yields a bitwise-identical artifact. Runs the determinism gate across OSes and
 # Python versions. See docs_v2/13_Testing_and_Reproducibility_Strategy.md.
+#
+# Scope (per doc 13): the BITWISE guarantee holds within a single OS/arch on the
+# pinned dependency set; across OS/arch we claim statistical (not bitwise)
+# equivalence. So numpy is pinned to the version the golden checksum was recorded
+# against, and the golden checksum is keyed per platform. Cells whose platform is
+# not yet recorded SKIP and print the value to record (see the job summary).
 
 on:
   push:
@@ -14,6 +20,10 @@ env:
   OMP_NUM_THREADS: "1"
   OPENBLAS_NUM_THREADS: "1"
   MKL_NUM_THREADS: "1"
+  # Pin numpy to the version the golden checksums are recorded against so the
+  # golden gate asserts (rather than skipping on version drift). numpy's random
+  # streams are the determinism-critical dependency for the numeric golden spec.
+  DATADOOM_PINNED_NUMPY: "2.4.6"
 
 jobs:
   repro:
@@ -29,13 +39,30 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
-      - name: Install
+      - name: Install (pinned numpy)
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev]" "numpy==${{ env.DATADOOM_PINNED_NUMPY }}"
       - name: Determinism gate
         run: pytest tests/determinism -v
       - name: CLI verify round-trip
         run: |
           datadoom run examples/tabular-basic.datadoom.yaml --seed 7 --out _run
           datadoom verify examples/tabular-basic.datadoom.yaml --seed 7 --against _run
+      - name: Report golden checksum for this cell
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import platform, tempfile
+          import numpy as np
+          from datadoom.engine import generate, load_spec
+          r = generate(load_spec("tests/golden/fraud_numeric.datadoom.yaml"),
+                       seed=12345, out_dir=tempfile.mkdtemp())
+          key = f"{platform.system()}-{platform.machine()}-numpy-{np.__version__}"
+          print(f"### Golden checksum")
+          print(f'`"{key}": "{r.artifacts[0].checksum_sha256}"`')
+          print("")
+          print("Add the line above to `tests/golden/checksums.json` to turn this "
+                "cell's golden test from a skip into a bitwise assertion.")
+          PY

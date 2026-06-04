@@ -106,15 +106,17 @@ def test_basic_compliance_applicability_is_honest(basic) -> None:
     by_name = {f.feature: f for f in comp.features}
     # Only features with a `dist` are assessed; derived/non-numeric are skipped.
     assert set(by_name) == {"age", "income", "visits"}
-    # age (int + clamp) and visits (discrete poisson) are not KS-applicable;
-    # income (continuous lognormal, unclamped) is.
-    assert by_name["age"].applicable is False and by_name["age"].passed is None
-    assert by_name["visits"].applicable is False and by_name["visits"].passed is None
-    assert by_name["income"].applicable is True and by_name["income"].passed is not None
+    # age (int + clamp) and visits (discrete poisson) are judged by a chi-square
+    # GoF against the effective PMF; income (continuous lognormal, unclamped) by
+    # KS. All three are assessable, and a correct generator passes each.
+    assert by_name["age"].test == "chi2_gof" and by_name["age"].applicable is True
+    assert by_name["visits"].test == "chi2_gof" and by_name["visits"].applicable is True
+    assert by_name["income"].test == "ks" and by_name["income"].applicable is True
+    assert by_name["age"].passed is True and by_name["visits"].passed is True
     d = comp.to_dict()
-    assert d["assessed_features"] == 3 and d["applicable_features"] == 1
-    # A correct generator is never dragged below the applicable pass rate.
-    assert comp.score in (0.0, 1.0)
+    assert d["assessed_features"] == 3 and d["applicable_features"] == 3
+    # A correct generator lands at a full pass rate.
+    assert comp.score == 1.0
 
 
 def test_basic_is_reproducible() -> None:

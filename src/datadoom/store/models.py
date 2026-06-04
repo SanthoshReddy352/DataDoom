@@ -99,6 +99,9 @@ class GenerationRunRow(Base):
     created_at: Mapped[str] = mapped_column(String, nullable=False)
 
     dataset: Mapped[DatasetRow] = relationship(back_populates="runs")
+    # Read-only handle to the immutable spec snapshot this run was generated from,
+    # so callers can surface its ``spec_hash`` (the version-control anchor).
+    spec: Mapped[SpecRow] = relationship(viewonly=True)
     artifacts: Mapped[list[ArtifactRow]] = relationship(
         back_populates="run", cascade="all, delete-orphan", passive_deletes=True
     )
@@ -150,6 +153,7 @@ class ReportRow(Base):
     causal_truth: Mapped[dict[str, Any] | None] = mapped_column(SAJSON, nullable=True)
     difficulty: Mapped[dict[str, Any] | None] = mapped_column(SAJSON, nullable=True)
     failures: Mapped[dict[str, Any] | None] = mapped_column(SAJSON, nullable=True)
+    profile: Mapped[dict[str, Any] | None] = mapped_column(SAJSON, nullable=True)
     determinism: Mapped[dict[str, Any] | None] = mapped_column(SAJSON, nullable=True)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
 

@@ -289,6 +289,7 @@ export const TYPE_COLOR: Record<string, string> = {
   boolean: "var(--warning)",
   datetime: "var(--success)",
   text: "var(--hazard)",
+  timeseries: "var(--accent, var(--primary))",
 };
 export function TypeChip({ type }: { type: string }) {
   return (

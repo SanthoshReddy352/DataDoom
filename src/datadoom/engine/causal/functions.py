@@ -9,6 +9,7 @@ on numpy arrays so they stay deterministic on the pinned path.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 
 import numpy as np
 
@@ -25,6 +26,9 @@ class StructuralFn(ABC):
     """ABC for an edge's structural function."""
 
     name: str
+    # Optional JSON-schema fragment for the edge params (09 §6); ``None`` for
+    # built-ins (the Graph inspector renders their native controls).
+    param_schema: Mapping[str, object] | None = None
 
     @abstractmethod
     def contribution(self, parent: np.ndarray, edge: CausalEdge) -> np.ndarray:

@@ -1,0 +1,60 @@
+datadoom_version: "1"
+name: "customer-churn"
+description: >
+  Customer-churn starter. Tenure, monthly charges and support load feed a latent
+  satisfaction score (emit: false — it shapes the label and shows up in the true
+  causal graph, but is never shipped) behind a churn label. The dataset is
+  calibrated down to the 'intermediate' baseline-AUROC band, so a baseline model
+  lands in [0.62, 0.72] — hard in a measured, honest way.
+seed: 23
+rows: 7000
+
+features:
+  tenure_months:
+    type: numeric
+    dist: normal
+    params: { mean: 28, std: 16 }
+    min: 0
+    dtype: int
+  monthly_charges:
+    type: numeric
+    dist: normal
+    params: { mean: 70, std: 25 }
+    min: 0
+  support_tickets:
+    type: numeric
+    dist: poisson
+    params: { lam: 2.5 }
+    min: 0
+    dtype: int
+  satisfaction:
+    type: numeric          # latent: weighted combination of the drivers
+    dtype: float
+    emit: false            # hidden — drives the label but is not shipped
+  churned:
+    type: boolean          # label (derived): logistic of (low) satisfaction
+
+causal:
+  edges:
+    - { from: tenure_months,  to: satisfaction, fn: linear, weight: 0.04 }
+    - { from: monthly_charges, to: satisfaction, fn: linear, weight: -0.03 }
+    - { from: support_tickets, to: satisfaction, fn: linear, weight: -0.4 }
+    - { from: satisfaction,   to: churned, fn: logistic, weight: -2.5, bias: 0.2 }
+  noise:
+    satisfaction: { dist: none }
+    churned: { dist: none }
+
+difficulty:
+  target: intermediate      # beginner | intermediate | advanced | kaggle
+  label: churned
+  probe: logreg
+  max_iters: 10
+  knobs: [noise, label_noise]
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Predict churned from tenure, charges, support load (satisfaction is latent)."
+  tags: [churn, difficulty, latent, causal, classification]

@@ -1,0 +1,61 @@
+datadoom_version: "1"
+name: "hospital-readmission"
+description: >
+  Hospital 30-day readmission starter. Patient age, diagnosis count, length of stay
+  and prior admissions drive a latent severity score (emit: false) behind a
+  readmission label. A clean causal dataset with a hidden confounder documented in
+  the true graph — a good base to add failures or a difficulty target onto.
+seed: 11
+rows: 6000
+
+features:
+  patient_age:
+    type: numeric
+    dist: normal
+    params: { mean: 58, std: 17 }
+    min: 18
+    max: 100
+    dtype: int
+  num_diagnoses:
+    type: numeric
+    dist: poisson
+    params: { lam: 4 }
+    min: 0
+    dtype: int
+  length_of_stay:
+    type: numeric
+    dist: normal
+    params: { mean: 5, std: 3 }
+    min: 1
+    dtype: int
+  prior_admissions:
+    type: numeric
+    dist: poisson
+    params: { lam: 1.2 }
+    min: 0
+    dtype: int
+  severity:
+    type: numeric          # latent: weighted combination of the drivers
+    dtype: float
+    emit: false            # hidden confounder — not shipped
+  readmitted:
+    type: boolean          # label (derived): logistic of severity
+
+causal:
+  edges:
+    - { from: patient_age,      to: severity, fn: linear, weight: 0.02 }
+    - { from: num_diagnoses,    to: severity, fn: linear, weight: 0.25 }
+    - { from: length_of_stay,   to: severity, fn: linear, weight: 0.18 }
+    - { from: prior_admissions, to: severity, fn: linear, weight: 0.6 }
+    - { from: severity,         to: readmitted, fn: logistic, weight: 1.8, bias: -2.0 }
+  noise:
+    severity: { dist: none }
+    readmitted: { dist: none }
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Predict readmitted from age, diagnoses, length of stay, prior admissions (severity is latent)."
+  tags: [healthcare, causal, latent, classification]

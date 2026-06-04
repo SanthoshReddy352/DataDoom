@@ -8,11 +8,12 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { clsx } from "@/lib/clsx";
 import { useUi } from "@/store/ui";
 import { useChrome, type Crumb } from "@/store/chrome";
 import { Toaster } from "./Toaster";
+import { ConfirmHost } from "./ConfirmHost";
 import { ErrorBoundary } from "./ErrorBoundary";
 
 const NAV = [
@@ -27,11 +28,20 @@ export function Layout({ children }: { children: ReactNode }) {
   const collapsed = useUi((s) => s.sidebarCollapsed);
   const toggle = useUi((s) => s.toggleSidebar);
   const crumbs = useChrome((s) => s.crumbs);
+  const location = useLocation();
 
   return (
     <div className="flex h-full bg-bg">
+      {/* Keyboard users can jump straight to the page content. */}
+      <a
+        href="#main-content"
+        className="ring-focus sr-only z-[100] focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:rounded-control focus:border focus:border-border focus:bg-surface-1 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-text focus:shadow-pop"
+      >
+        Skip to content
+      </a>
       {/* Sidebar */}
       <aside
+        aria-label="Sidebar"
         className={clsx(
           "hidden shrink-0 flex-col border-r border-border bg-surface-1 transition-[width] duration-300 ease-out md:flex",
           collapsed ? "w-[68px]" : "w-[244px]",
@@ -56,7 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav className="mt-2 flex flex-1 flex-col gap-5 px-3">
+        <nav aria-label="Primary" className="mt-2 flex flex-1 flex-col gap-5 px-3">
           {NAV_SECTIONS.map((section) => (
             <div key={section}>
               {!collapsed && <div className="kicker mb-1.5 px-2.5">{section}</div>}
@@ -122,6 +132,8 @@ export function Layout({ children }: { children: ReactNode }) {
           <button
             onClick={toggle}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-expanded={!collapsed}
             className={clsx(
               "ring-focus mt-1 flex items-center gap-2 rounded-control py-2 text-xs text-text-faint transition-colors hover:bg-surface-2 hover:text-text",
               collapsed ? "justify-center px-0" : "px-2.5",
@@ -153,11 +165,12 @@ export function Layout({ children }: { children: ReactNode }) {
             </span>
           </div>
         </header>
-        <main className="min-h-0 flex-1 overflow-hidden">
-          <ErrorBoundary>{children}</ErrorBoundary>
+        <main id="main-content" tabIndex={-1} className="min-h-0 flex-1 overflow-hidden outline-none">
+          <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>
         </main>
       </div>
       <Toaster />
+      <ConfirmHost />
     </div>
   );
 }
@@ -165,7 +178,7 @@ export function Layout({ children }: { children: ReactNode }) {
 function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   if (crumbs.length === 0) return <div className="hidden md:block" />;
   return (
-    <nav className="hidden min-w-0 items-center gap-1.5 text-sm md:flex">
+    <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-sm md:flex">
       {crumbs.map((c, i) => {
         const last = i === crumbs.length - 1;
         return (

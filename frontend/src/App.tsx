@@ -5,6 +5,8 @@ import { Canvas } from "./pages/Canvas";
 import { Tracker } from "./pages/Tracker";
 import { Results } from "./pages/Results";
 import { Placeholder } from "./pages/Placeholder";
+import { Plugins } from "./pages/Plugins";
+import { Templates } from "./pages/Templates";
 
 export default function App() {
   return (
@@ -15,26 +17,8 @@ export default function App() {
         <Route path="/datasets/:id" element={<Canvas />} />
         <Route path="/datasets/:id/run/:runId" element={<Tracker />} />
         <Route path="/datasets/:id/results/:runId" element={<Results />} />
-        <Route
-          path="/templates"
-          element={
-            <Placeholder
-              kicker="Collections"
-              title="Templates"
-              body="Domain starter specs (fraud, churn, readmission) arrive in Phase 5. The gallery route is wired and ready."
-            />
-          }
-        />
-        <Route
-          path="/plugins"
-          element={
-            <Placeholder
-              kicker="Ecosystem"
-              title="Plugins"
-              body="Distributions, structural functions, failure modes and exporters discovered from installed packages — Phase 5. Offline; no marketplace."
-            />
-          }
-        />
+        <Route path="/templates" element={<Templates />} />
+        <Route path="/plugins" element={<Plugins />} />
         <Route
           path="/settings"
           element={

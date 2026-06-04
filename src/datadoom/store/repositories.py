@@ -269,6 +269,7 @@ class ReportRepository:
         existing.causal_truth = sections.get("causal_truth")
         existing.difficulty = sections.get("difficulty")
         existing.failures = sections.get("failures")
+        existing.profile = sections.get("profile")
         existing.determinism = sections.get("determinism")
         self.s.flush()
         return existing

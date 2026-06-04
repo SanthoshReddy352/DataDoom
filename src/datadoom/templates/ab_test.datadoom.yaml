@@ -1,0 +1,46 @@
+datadoom_version: "1"
+name: "marketing-ab-test"
+description: >
+  Marketing A/B-test starter — a fast experiment table: a 50/50 control vs.
+  treatment assignment, session engagement (exponential dwell time, Poisson
+  pageviews), a conversion flag and order revenue. Distribution-only, so it
+  generates instantly.
+seed: 27
+rows: 9000
+
+features:
+  variant:
+    type: categorical
+    categories: [control, treatment]
+    weights: [0.5, 0.5]
+  device:
+    type: categorical
+    categories: [desktop, mobile, tablet]
+    weights: [0.5, 0.42, 0.08]
+  session_minutes:
+    type: numeric
+    dist: exponential
+    params: { scale: 6.0 }
+    min: 0
+  pageviews:
+    type: numeric
+    dist: poisson
+    params: { lam: 5 }
+    min: 0
+    dtype: int
+  revenue:
+    type: numeric
+    dist: lognormal
+    params: { mu: 2.6, sigma: 1.1 }
+    min: 0
+  converted:
+    type: boolean
+    rate: 0.12
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Web A/B experiment data (assignment, engagement, conversion)."
+  tags: [marketing, experiment, tabular]

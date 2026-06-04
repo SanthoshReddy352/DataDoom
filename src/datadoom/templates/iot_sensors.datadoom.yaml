@@ -1,0 +1,44 @@
+datadoom_version: "1"
+name: "iot-sensor-readings"
+description: >
+  IoT sensor telemetry starter — a fast, purely numeric table of environmental
+  readings (temperature, humidity, pressure, battery) tagged by device and
+  hourly timestamp. Bounded distributions keep the values physically plausible.
+seed: 19
+rows: 12000
+
+features:
+  device_id:
+    type: categorical
+    categories: [sensor-a, sensor-b, sensor-c, sensor-d]
+  temperature_c:
+    type: numeric
+    dist: normal
+    params: { mean: 21.5, std: 4.0 }
+  humidity_pct:
+    type: numeric
+    dist: normal
+    params: { mean: 45, std: 12 }
+    min: 0
+    max: 100
+  pressure_hpa:
+    type: numeric
+    dist: normal
+    params: { mean: 1013, std: 8 }
+  battery_pct:
+    type: numeric
+    dist: uniform
+    params: { low: 20, high: 100 }
+  reading_time:
+    type: datetime
+    start: "2024-01-01"
+    end: "2024-03-31"
+    granularity: hour
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Hourly multi-sensor telemetry for quick prototyping (distribution-only)."
+  tags: [iot, numeric, datetime, timeseries-ish]

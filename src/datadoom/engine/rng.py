@@ -21,6 +21,7 @@ NS_FEATURE = "feature"
 NS_NOISE = "noise"
 NS_FAILURE = "failure"
 NS_PROBE = "probe"
+NS_DIFFICULTY = "difficulty"
 NS_SHUFFLE = "shuffle"
 
 
@@ -61,6 +62,14 @@ class RNGFactory:
 
     def failure(self, index: int) -> np.random.Generator:
         return self.generator(f"{NS_FAILURE}:{index}")
+
+    def difficulty(self, name: str) -> np.random.Generator:
+        """Stream for difficulty-calibration perturbations (feature/label noise)."""
+        return self.generator(f"{NS_DIFFICULTY}:{name}")
+
+    def probe(self, name: str) -> np.random.Generator:
+        """Stream for difficulty probe-model seeds (train/test split, estimator)."""
+        return self.generator(f"{NS_PROBE}:{name}")
 
     def shuffle(self) -> np.random.Generator:
         return self.generator(NS_SHUFFLE)

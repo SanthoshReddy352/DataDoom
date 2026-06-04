@@ -1,0 +1,43 @@
+datadoom_version: "1"
+name: "insurance-claims"
+description: >
+  Insurance claims starter showcasing a heavy-tailed claim amount (Pareto) — most
+  claims are small, a few are very large. Policyholder age, region, prior-claim
+  count and a fraud flag round it out. Distribution-only, generates instantly.
+seed: 13
+rows: 8000
+
+features:
+  policyholder_age:
+    type: numeric
+    dist: normal
+    params: { mean: 47, std: 15 }
+    min: 18
+    max: 90
+    dtype: int
+  region:
+    type: categorical
+    categories: [north, south, east, west]
+    weights: [0.25, 0.3, 0.2, 0.25]
+  claim_amount:
+    type: numeric
+    dist: pareto
+    params: { alpha: 2.5, xm: 800 }
+    min: 0
+  num_prior_claims:
+    type: numeric
+    dist: poisson
+    params: { lam: 1.1 }
+    min: 0
+    dtype: int
+  is_fraudulent:
+    type: boolean
+    rate: 0.05
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Insurance claims with a heavy-tailed (Pareto) claim amount."
+  tags: [insurance, heavy-tail, tabular]

@@ -342,7 +342,17 @@ function ColumnHeader({
           </button>
         </div>
         <div className="px-2.5 pb-2 pt-1.5">
-          <TypeChip type={feature.type} />
+          <div className="flex flex-wrap items-center gap-1.5">
+            <TypeChip type={feature.type} />
+            {feature.emit === false && (
+              <span
+                title="Latent — drives the model but is not exported"
+                className="rounded-pill border border-border bg-surface-2 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-text-faint"
+              >
+                latent
+              </span>
+            )}
+          </div>
           <FailureBadges failures={failures} column={name} className="mt-1.5" />
           <dl className="mt-2 space-y-1">
             {rows.map((s, i) => (

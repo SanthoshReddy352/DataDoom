@@ -29,13 +29,15 @@ def test_clamping_is_recorded() -> None:
     assert result.frame["x"].min() >= -1 and result.frame["x"].max() <= 1
 
 
-def test_clamping_marks_ks_not_applicable() -> None:
+def test_clamping_uses_gof_not_ks() -> None:
     # Truncation introduces point masses at the bounds → a continuous KS test
-    # would falsely reject. It must be excluded from the score, not failed.
+    # would falsely reject. A chi-square GoF against the effective (clamped) PMF
+    # earns a real pass for a correct generator.
     spec = _numeric_spec(params={"mean": 0, "std": 1}, min=-1, max=1)
     fc = generate(spec, seed=1).compliance.features[0]
-    assert fc.applicable is False and fc.passed is None
-    # A correct-but-clamped sole feature must not drag compliance to 0.
+    assert fc.test == "chi2_gof"
+    assert fc.applicable is True and fc.passed is True
+    # A correct-but-clamped sole feature scores 1.0, never 0.
     assert generate(spec, seed=1).compliance.score == 1.0
 
 
@@ -43,17 +45,19 @@ def test_no_clamp_continuous_is_ks_applicable() -> None:
     spec = _numeric_spec(params={"mean": 0, "std": 1})
     fc = generate(spec, seed=1).compliance.features[0]
     assert fc.clamped_fraction == 0.0
+    assert fc.test == "ks"
     assert fc.applicable is True and fc.passed is not None
 
 
-def test_int_dtype_is_integral_and_ks_not_applicable() -> None:
+def test_int_dtype_is_integral_and_uses_gof() -> None:
     # Integer rounding discretizes a continuous target; the continuous KS test
-    # is invalid, so it is reported but excluded from the score.
+    # is invalid, so a chi-square GoF against the discretized PMF is used instead.
     spec = _numeric_spec(params={"mean": 100, "std": 10}, dtype="int")
     result = generate(spec, seed=1)
     assert str(result.frame["x"].dtype).startswith("int")
     fc = result.compliance.features[0]
-    assert fc.applicable is False and fc.passed is None
+    assert fc.test == "chi2_gof"
+    assert fc.applicable is True and fc.passed is True
     # The empirical moments still track the requested target.
     assert abs(fc.empirical["mean"] - 100) < 1.0
 

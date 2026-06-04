@@ -15,6 +15,7 @@ from .models import (
     NumericFeature,
     Spec,
     TextFeature,
+    TimeseriesFeature,
 )
 
 SUPPORTED_SPEC_VERSIONS = {"1"}
@@ -75,6 +76,18 @@ def _check_features(spec: Spec) -> None:
                     f"unknown text generator {feat.generator!r}", locator=f"{loc}.generator"
                 )
             resolve_locale(feat.locale, locator=f"{loc}.locale")
+        elif isinstance(feat, TimeseriesFeature):
+            if feat.min is not None and feat.max is not None and feat.min > feat.max:
+                raise SpecValidationError("min > max", locator=loc)
+            # AR stationarity: Σ|φᵢ| < 1 is a conservative sufficient condition that
+            # keeps the recursion bounded (a true unit-root/explosive series drifts
+            # without bound and isn't reproducibly meaningful). Reject otherwise.
+            if feat.ar and sum(abs(c) for c in feat.ar) >= 1.0:
+                raise SpecValidationError(
+                    "time-series AR is non-stationary: sum(|ar coefficients|) must be "
+                    f"< 1 (got {sum(abs(c) for c in feat.ar):.3f})",
+                    locator=f"{loc}.ar",
+                )
 
 
 def _derived_names(spec: Spec) -> set[str]:
@@ -123,7 +136,7 @@ def _check_causal(spec: Spec) -> None:
                     f"map edge is missing mappings for categories {missing}",
                     locator=f"{loc}.mapping",
                 )
-        elif not isinstance(parent, (NumericFeature, BooleanFeature)):
+        elif not isinstance(parent, (NumericFeature, BooleanFeature, TimeseriesFeature)):
             raise SpecValidationError(
                 f"{edge.fn!r} edge requires a numeric/boolean 'from' feature; {edge.src!r} "
                 f"is type {parent.type!r} (use fn 'map' for categorical parents)",
@@ -195,10 +208,90 @@ def _reject_cycles(adjacency: dict[str, list[str]]) -> None:
 def _check_difficulty(spec: Spec) -> None:
     if spec.difficulty is None:
         return
-    if spec.difficulty.label not in spec.features:
+    # Lazy imports keep the difficulty layer optional at module load time.
+    from ..difficulty import PROBES, TIER_BANDS
+    from ..difficulty.knobs import ACTIVE_KNOBS
+
+    cfg = spec.difficulty
+
+    # The probe predicts the label; it must be a declared, classification-able
+    # feature. v0.1 calibrates binary-classification AUROC only.
+    label_feat = spec.features.get(cfg.label)
+    if label_feat is None:
         raise SpecValidationError(
-            f"difficulty.label {spec.difficulty.label!r} is not a declared feature",
+            f"difficulty.label {cfg.label!r} is not a declared feature",
             locator="difficulty.label",
+        )
+    if label_feat.emit is False:
+        raise SpecValidationError(
+            f"difficulty.label {cfg.label!r} is latent (emit: false) and is not shipped; "
+            "the probe can only predict an observable label",
+            locator="difficulty.label",
+        )
+    if isinstance(label_feat, BooleanFeature):
+        pass
+    elif isinstance(label_feat, CategoricalFeature):
+        if len(label_feat.categories) != 2:
+            raise SpecValidationError(
+                f"difficulty.label {cfg.label!r} is categorical with "
+                f"{len(label_feat.categories)} classes; v0.1 calibrates binary "
+                "classification only (use a boolean or 2-class categorical label)",
+                locator="difficulty.label",
+            )
+    else:
+        raise SpecValidationError(
+            f"difficulty.label {cfg.label!r} has type {label_feat.type!r}; v0.1 "
+            "supports binary-classification targets only (boolean or 2-class "
+            "categorical)",
+            locator="difficulty.label",
+        )
+
+    if cfg.probe not in PROBES:
+        raise SpecValidationError(
+            f"unknown difficulty probe {cfg.probe!r} (known: {sorted(PROBES)})",
+            locator="difficulty.probe",
+        )
+
+    # Target is either a named tier or an explicit band dict.
+    if isinstance(cfg.target, str):
+        if cfg.target not in TIER_BANDS:
+            raise SpecValidationError(
+                f"unknown difficulty tier {cfg.target!r} (known: {sorted(TIER_BANDS)})",
+                locator="difficulty.target",
+            )
+    elif isinstance(cfg.target, dict):
+        band = cfg.target.get("band")
+        if not (isinstance(band, (list, tuple)) and len(band) == 2):
+            raise SpecValidationError(
+                "difficulty.target must name a tier or carry a 'band': [lo, hi]",
+                locator="difficulty.target.band",
+            )
+        lo, hi = float(band[0]), float(band[1])
+        if not (0.0 <= lo <= hi <= 1.0):
+            raise SpecValidationError(
+                f"difficulty band must satisfy 0 <= lo <= hi <= 1 (got [{lo}, {hi}])",
+                locator="difficulty.target.band",
+            )
+        metric = cfg.target.get("metric", "auroc")
+        if metric != "auroc":
+            raise SpecValidationError(
+                f"unsupported difficulty metric {metric!r}; v0.1 supports 'auroc'",
+                locator="difficulty.target.metric",
+            )
+    else:
+        raise SpecValidationError(
+            "difficulty.target must be a tier name or an explicit-band object",
+            locator="difficulty.target",
+        )
+
+    # Only the actively-implemented knobs are accepted — no silently-ignored
+    # config. `causal` shrink and `imbalance` are planned (see status.md backlog).
+    unknown = [k for k in cfg.knobs if k not in ACTIVE_KNOBS]
+    if unknown:
+        raise SpecValidationError(
+            f"unsupported difficulty knob(s) {unknown}; v0.1 implements "
+            f"{list(ACTIVE_KNOBS)} (causal shrink and imbalance are planned)",
+            locator="difficulty.knobs",
         )
 
 
@@ -206,6 +299,7 @@ def _check_failures(spec: Spec) -> None:
     # Lazy import keeps the failure layer optional at module load time.
     from ..failure.modes import FAILURE_MODES
 
+    latent = spec.latent_names()
     for i, failure in enumerate(spec.failures):
         loc = f"failures[{i}]"
         mode = FAILURE_MODES.get(failure.type)
@@ -218,9 +312,30 @@ def _check_failures(spec: Spec) -> None:
         params = failure.model_dump()
         params.pop("type", None)
         mode.validate(params, spec.features, loc)
+        # Failures corrupt the *shipped* frame; a latent column was already
+        # dropped, so referencing one would fail at runtime — reject it early.
+        for val in (*params.values(),):
+            refs = val if isinstance(val, list) else [val]
+            for ref in refs:
+                if isinstance(ref, str) and ref in latent:
+                    raise SpecValidationError(
+                        f"failure references latent feature {ref!r} (emit: false), "
+                        "which is not shipped and cannot be corrupted",
+                        locator=loc,
+                    )
 
 
 def _check_export(spec: Spec) -> None:
+    from ..export import EXPORTERS
+
+    for fmt in spec.export.formats:
+        if fmt not in EXPORTERS:
+            known = ", ".join(sorted(EXPORTERS))
+            raise SpecValidationError(
+                f"unknown export format {fmt!r}; known formats: {known}",
+                locator="export.formats",
+            )
+
     splits = spec.export.splits
     if splits is not None:
         total = sum(splits.values())

@@ -1,0 +1,29 @@
+# Keep the build context small and the image clean.
+.git
+.gitignore
+.github
+.venv
+**/__pycache__
+**/*.pyc
+*.egg-info
+src/*.egg-info
+
+# Frontend build inputs/outputs are produced fresh in the Node stage.
+frontend/node_modules
+frontend/dist
+src/datadoom/webdist
+
+# Docs site build output + legacy doc sets (not needed at runtime).
+site
+docs
+Docs
+
+# Tests and scratch/run output.
+tests
+.tmp_run
+.tmp_*
+out
+tmp
+dist
+build
+*.local.yaml

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, MoreHorizontal, Pencil, Plus, Search, Sparkles, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Copy, FileUp, MoreHorizontal, Pencil, Plus, Search, Sparkles, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Button,
@@ -14,10 +14,12 @@ import {
   StatusBadge,
 } from "@/components/ui";
 import { Field, Modal, TextInput } from "@/components/Modal";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { clsx } from "@/lib/clsx";
 import { starterSpec } from "@/lib/specDefaults";
 import { useChrome } from "@/store/chrome";
 import { toast } from "@/store/toast";
+import { confirmDialog } from "@/store/confirm";
 import type { DatasetSummary } from "@/lib/types";
 
 function fmtBytes(n: number) {
@@ -32,6 +34,7 @@ export function Dashboard() {
   const nav = useNavigate();
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [renaming, setRenaming] = useState<DatasetSummary | null>(null);
   const setCrumbs = useChrome((s) => s.setCrumbs);
 
@@ -85,6 +88,9 @@ export function Dashboard() {
                 className="ring-focus w-52 rounded-control border border-border bg-surface-1 py-2.5 pl-9 pr-3 text-sm shadow-soft outline-none transition-colors focus:border-primary"
               />
             </div>
+            <Button onClick={() => setImporting(true)}>
+              <FileUp size={16} /> From YAML
+            </Button>
             <Button variant="primary" onClick={() => setCreating(true)}>
               <Plus size={16} /> Create Dataset
             </Button>
@@ -117,8 +123,15 @@ export function Dashboard() {
                 onOpen={() => nav(`/datasets/${d.dataset_id}`)}
                 onRename={() => setRenaming(d)}
                 onDuplicate={() => dup.mutate(d.dataset_id)}
-                onDelete={() => {
-                  if (confirm(`Delete dataset "${d.name}"? This removes its runs and artifacts.`))
+                onDelete={async () => {
+                  if (
+                    await confirmDialog({
+                      title: `Delete "${d.name}"?`,
+                      message: "This permanently removes the dataset along with its runs and artifacts.",
+                      confirmLabel: "Delete",
+                      tone: "danger",
+                    })
+                  )
                     del.mutate(d.dataset_id);
                 }}
               />
@@ -130,6 +143,11 @@ export function Dashboard() {
       <CreateModal
         open={creating}
         onClose={() => setCreating(false)}
+        onCreated={(id) => nav(`/datasets/${id}`)}
+      />
+      <ImportYamlModal
+        open={importing}
+        onClose={() => setImporting(false)}
         onCreated={(id) => nav(`/datasets/${id}`)}
       />
       <RenameModal dataset={renaming} onClose={() => setRenaming(null)} />
@@ -160,7 +178,7 @@ function DatasetCard({
         </button>
         <div className="flex shrink-0 items-center gap-1.5">
           <StatusBadge status={d.status} />
-          <Menu trigger={({ toggle }) => <IconButton onClick={toggle} className="h-7 w-7"><MoreHorizontal size={16} /></IconButton>}>
+          <Menu trigger={({ toggle }) => <IconButton onClick={toggle} aria-label="More actions" className="h-7 w-7"><MoreHorizontal size={16} /></IconButton>}>
             {(close) => (
               <>
                 <MenuItem icon={<Pencil size={14} />} onClick={() => { close(); onRename(); }}>
@@ -342,6 +360,160 @@ function CreateModal({
           <TextInput value={seed} onChange={(e) => setSeed(e.target.value.replace(/[^0-9]/g, ""))} placeholder="auto" />
         </Field>
         {err && <p className="text-sm text-hazard">{err}</p>}
+      </div>
+    </Modal>
+  );
+}
+
+const YAML_PLACEHOLDER = `datadoom_version: "1"
+name: my-dataset
+rows: 10000
+seed: 42
+features:
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 40, std: 12 }`;
+
+function ImportYamlModal({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const [text, setText] = useState("");
+  const [err, setErr] = useState<{ message: string; locator?: string | null } | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setText("");
+    setErr(null);
+    setOk(null);
+  }
+
+  const importMut = useMutation({
+    mutationFn: async () => {
+      const { spec } = await api.parseYaml(text);
+      return api.createDataset({ name: spec.name, description: spec.description ?? undefined, spec });
+    },
+    onSuccess: (ds) => {
+      reset();
+      onCreated(ds.dataset_id);
+    },
+    onError: (e: ApiError) => {
+      setErr({ message: e.message, locator: e.locator });
+      setOk(null);
+    },
+  });
+
+  const validateMut = useMutation({
+    mutationFn: () => api.parseYaml(text),
+    onSuccess: (r) => {
+      setOk(`Valid · ${r.spec_hash.slice(0, 12)}…`);
+      setErr(null);
+    },
+    onError: (e: ApiError) => {
+      setErr({ message: e.message, locator: e.locator });
+      setOk(null);
+    },
+  });
+
+  async function loadFile(file: File | undefined) {
+    if (!file) return;
+    setText(await file.text());
+    setErr(null);
+    setOk(null);
+  }
+
+  const busy = importMut.isPending || validateMut.isPending;
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => {
+        reset();
+        onClose();
+      }}
+      kicker="New experiment"
+      title="Import from YAML"
+      footer={
+        <>
+          <Button onClick={() => { reset(); onClose(); }}>Cancel</Button>
+          <Button disabled={!text.trim() || busy} onClick={() => validateMut.mutate()}>
+            {validateMut.isPending ? "Checking…" : "Validate"}
+          </Button>
+          <Button variant="primary" disabled={!text.trim() || busy} onClick={() => importMut.mutate()}>
+            {importMut.isPending ? "Importing…" : "Import & open Canvas"}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-text-muted">
+          Paste a <span className="font-mono text-xs">.datadoom.yaml</span> spec (or upload one). It is
+          parsed and validated by the same engine as <span className="font-mono text-xs">datadoom run</span>;
+          then open it in the Canvas and Generate.
+        </p>
+
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            void loadFile(e.dataTransfer.files[0]);
+          }}
+          className={clsx(
+            "rounded-control border transition-colors",
+            dragOver ? "border-primary bg-primary-tint" : "border-border",
+          )}
+        >
+          <textarea
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setErr(null);
+              setOk(null);
+            }}
+            spellCheck={false}
+            rows={12}
+            placeholder={YAML_PLACEHOLDER}
+            className="ring-focus block w-full resize-y rounded-control bg-surface-2 p-3 font-mono text-xs leading-relaxed outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="ring-focus inline-flex items-center gap-1.5 rounded-control border border-border px-2.5 py-1.5 text-xs font-medium text-text-muted transition-colors hover:text-text"
+          >
+            <Upload size={13} /> Upload .yaml / .json
+          </button>
+          <span className="text-xs text-text-faint">…or drag a file onto the box</span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".yaml,.yml,.json,application/json,text/yaml"
+            className="hidden"
+            onChange={(e) => void loadFile(e.target.files?.[0])}
+          />
+        </div>
+
+        {ok && <p className="text-sm text-success">✓ {ok}</p>}
+        {err && (
+          <p className="text-sm text-hazard">
+            ✗ {err.message}
+            {err.locator && <span className="ml-2 font-mono text-xs">@ {err.locator}</span>}
+          </p>
+        )}
       </div>
     </Modal>
   );

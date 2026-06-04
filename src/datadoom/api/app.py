@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 
 from datadoom.config import Config, load_config
 from datadoom.jobs import EventHub, WorkerPool
+from datadoom.plugins import load_plugins
 from datadoom.store import LocalArtifactStore, init_database
 from datadoom.version import __version__
 
@@ -32,6 +33,10 @@ WEBDIST = Path(__file__).resolve().parent.parent / "webdist"
 def create_app(config: Config | None = None) -> FastAPI:
     config = config or load_config()
     config.ensure_dirs()
+
+    # Discover plugins (entry points + local dir) into the engine's lookup tables;
+    # conflicts fail loudly here rather than silently shadowing a capability (09 §3).
+    load_plugins(local_dir=config.home / "plugins")
 
     db = init_database(config.db_url)
     artifact_store = LocalArtifactStore(config.artifacts_dir)

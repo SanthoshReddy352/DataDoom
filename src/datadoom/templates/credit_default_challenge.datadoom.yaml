@@ -1,0 +1,147 @@
+datadoom_version: "1"
+name: "credit-default-challenge"
+description: >
+  HACKATHON FLAGSHIP — consumer credit default. A multi-hop causal economy:
+  applicant demographics and employment drive annual income, income + debt load +
+  repayment history feed a LATENT risk_score (emit: false — the true generative
+  driver, never shipped), and the risk_score drives the `defaulted` label. The
+  clean dataset is then calibrated down to the 'advanced' baseline-AUROC band
+  [0.72, 0.80] so a vanilla model is honestly hard. On top, a realistic
+  data-quality stack corrupts a copy: income is MNAR (high earners under-report),
+  debt-to-income is MAR (missing for older applicants) and DRIFTS upward over time
+  (a simulated downturn), a `collections_flag` is a LEAKED near-proxy of the label
+  (students must detect and drop it), and 2% of labels are flipped. Train/test
+  split included.
+seed: 101
+rows: 9000
+
+features:
+  applicant_age:
+    type: numeric
+    dist: normal
+    params: { mean: 41, std: 13 }
+    min: 18
+    max: 90
+    dtype: int
+  employment_type:
+    type: categorical
+    categories: [unemployed, part_time, full_time, self_employed]
+    weights: [0.08, 0.17, 0.6, 0.15]
+  education:
+    type: categorical
+    categories: [hs, college, grad]
+    weights: [0.45, 0.42, 0.13]
+  region:
+    type: categorical
+    categories: [northeast, midwest, south, west]
+    weights: [0.22, 0.24, 0.32, 0.22]
+  requested_amount:
+    type: numeric
+    dist: lognormal
+    params: { mu: 9.1, sigma: 0.55 }   # median ≈ $8,950
+    min: 500
+  credit_history_months:
+    type: numeric
+    dist: normal
+    params: { mean: 96, std: 48 }
+    min: 0
+    dtype: int
+  num_open_accounts:
+    type: numeric
+    dist: poisson
+    params: { lam: 5 }
+    min: 0
+    dtype: int
+  num_late_payments:
+    type: numeric
+    dist: poisson
+    params: { lam: 1.1 }
+    min: 0
+    dtype: int
+  debt_to_income:
+    type: numeric
+    dist: normal
+    params: { mean: 0.34, std: 0.14 }
+    min: 0
+  annual_income:
+    type: numeric          # derived (hop 1): demographics + employment → income
+    dtype: float
+    min: 0
+  risk_score:
+    type: numeric          # derived LATENT (hop 2): the true default driver
+    dtype: float
+    emit: false            # hidden — shapes the label, shows in the true graph, not shipped
+  defaulted:
+    type: boolean          # label (hop 3): logistic of the latent risk_score
+
+causal:
+  edges:
+    # hop 1 — what someone earns
+    - { from: applicant_age,   to: annual_income, fn: linear, weight: 620, bias: 15000 }
+    - { from: education,       to: annual_income, fn: map,    mapping: { hs: 0, college: 18000, grad: 41000 } }
+    - { from: employment_type, to: annual_income, fn: map,    mapping: { unemployed: -16000, part_time: -4000, full_time: 12000, self_employed: 6000 } }
+    # hop 2 — latent creditworthiness
+    - { from: annual_income,        to: risk_score, fn: linear, weight: -0.000028 }
+    - { from: debt_to_income,       to: risk_score, fn: linear, weight: 4.2 }
+    - { from: num_late_payments,    to: risk_score, fn: linear, weight: 0.55 }
+    - { from: credit_history_months, to: risk_score, fn: linear, weight: -0.006 }
+    - { from: num_open_accounts,    to: risk_score, fn: linear, weight: 0.06 }
+    # hop 3 — the label
+    - { from: risk_score, to: defaulted, fn: logistic, weight: 1.6, bias: -1.2 }
+  noise:
+    annual_income: { dist: normal, params: { mean: 0, std: 6500 } }
+    risk_score: { dist: none }
+    defaulted: { dist: none }
+
+difficulty:
+  target: advanced          # baseline ROC-AUC calibrated into [0.72, 0.80]
+  label: defaulted
+  probe: logreg
+  max_iters: 10
+  knobs: [noise, label_noise]
+
+failures:
+  - type: mnar               # high earners under-report income
+    column: annual_income
+    rate: 0.10
+    strength: 2.2
+  - type: mar                # DTI missing for older applicants
+    column: debt_to_income
+    driver: applicant_age
+    rate: 0.08
+    strength: 2.0
+  - type: drift              # a simulated downturn pushes DTI up over time
+    column: debt_to_income
+    schedule: { kind: linear, magnitude: 0.15 }
+  - type: leakage            # collections_flag ≈ the label — a trap to detect and drop
+    target: defaulted
+    into: collections_flag
+    noise: 0.05
+  - type: label_noise        # 2% mislabelled defaults
+    column: defaulted
+    rate: 0.02
+
+export:
+  formats: [csv]
+  versions: [clean, injected]
+  splits: { train: 0.8, test: 0.2 }
+
+meta:
+  level: hackathon
+  challenge:
+    title: "Predict consumer credit default"
+    task: classification
+    target: defaulted
+    metric: ROC-AUC
+    difficulty: advanced
+    baseline_auroc_band: [0.72, 0.80]
+    train_test_split: "80 / 20"
+    hidden_structure: >
+      risk_score is latent (never shipped). The signal flows
+      demographics+employment → annual_income → risk_score → defaulted.
+    gotchas:
+      - "annual_income is MNAR — missingness depends on the (high) value itself."
+      - "debt_to_income is MAR (missing for older applicants) and drifts upward over the row order."
+      - "collections_flag is a leaked proxy of the label — drop it or you'll 'win' dishonestly."
+      - "2% of labels are flipped; perfect accuracy is not the goal."
+  tags: [finance, credit-risk, causal, latent, difficulty, failure-injection, leakage, classification]

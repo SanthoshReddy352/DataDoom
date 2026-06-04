@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import platform
 import sys
+from typing import Any
 
 from fastapi import APIRouter
 
+from datadoom.engine.reference import build_capabilities
 from datadoom.version import __version__
 
 from ..schemas import HealthResponse, VersionResponse
@@ -31,3 +33,13 @@ def version() -> VersionResponse:
         python=platform.python_version(),
         platform=f"{platform.system()} {platform.release()} ({sys.platform})",
     )
+
+
+@router.get("/spec-reference")
+def spec_reference() -> dict[str, Any]:
+    """Machine-readable spec capabilities manifest (for AI/tooling authoring).
+
+    Built from the live registries, so plugin-registered capabilities are
+    included. Mirrors the ``datadoom spec-reference`` CLI.
+    """
+    return build_capabilities()

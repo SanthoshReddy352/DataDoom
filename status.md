@@ -4,7 +4,8 @@
 > this file tracks delivery against it. Update it whenever a task's status
 > changes or a task is broken down into subtasks.
 >
-> **Last updated:** 2026-06-03
+> **Last updated:** 2026-06-04 (Task 19 hardening complete — docs site, release
+> automation/Docker, repro/perf/a11y; team mode deferred as a future addon)
 
 ## How to read this file
 
@@ -50,11 +51,21 @@
 | 14 | Frontend Failure Configurator + Comparison | P3 | ✅ | 2026-06-02 |
 | E1 | Realistic text providers (mimesis), seeded for determinism | Enhancement | ✅ | 2026-06-03 |
 | E2 | Frontend Generation-Overview dashboard tab (from metadata) | Enhancement | ✅ | 2026-06-03 |
-| 15 | `engine/difficulty/` — probes + adaptive loop | P4 | ⬜ | — |
-| 16 | Frontend difficulty UI + evaluation report | P4 | ⬜ | — |
-| 17 | `plugins/` — registry + loader + scaffolder | P5 | ⬜ | — |
-| 18 | Exporters (Parquet/JSON) + templates + time-series | P5 | ⬜ | — |
-| 19 | Hardening, docs site, release automation, team mode | P6 | ⬜ | — |
+| E3 | Latent features (`emit: false`) — hidden confounders / latent scores | Enhancement | ✅ | 2026-06-03 |
+| E4 | Web "Import from YAML" (paste/upload → validate → create) | Enhancement | ✅ | 2026-06-03 |
+| 15 | `engine/difficulty/` — probes + adaptive loop | P4 | ✅ | 2026-06-03 |
+| 16 | Frontend difficulty UI + evaluation report | P4 | ✅ | 2026-06-03 |
+| 17 | `plugins/` — registry + loader + scaffolder + UI gallery | P5 | ✅ | 2026-06-03 |
+| 18 | Exporters (Parquet/JSON) + templates + time-series + adapters | P5 | ✅ | 2026-06-03 |
+| 18.5 | AI spec-authoring contract (capabilities manifest + LLM reference) | P5 | ✅ | 2026-06-03 |
+| 18.6 | Hackathon mode — enterprise template pack + `level` catalog facet | P5 | ✅ | 2026-06-03 |
+| E5 | Column Guide — per-column data profile + failure attribution + ML advice | Enhancement | ✅ | 2026-06-04 |
+| E6 | Locked spec YAML per generation (tracked artifact + per-run download) | Enhancement | ✅ | 2026-06-04 |
+| E7 | Audit report bound into the bundle + correct artifact naming in Export | Enhancement | ✅ | 2026-06-04 |
+| 19 | Hardening: docs site, release automation, repro/perf/a11y (team mode deferred) | P6 | ✅ | 2026-06-04 |
+| 19.1 | Docs site (mkdocs-material) + GitHub Pages workflow + operator runbook | P6 | ✅ | 2026-06-04 |
+| 19.2 | Release automation (PyPI OIDC + provenance) + Docker image | P6 | ✅ | 2026-06-04 |
+| 19.3 | Repro-matrix hardening + badges + perf budget + accessibility pass | P6 | ✅ | 2026-06-04 |
 
 **P0 exit gate:** ✅ same spec+seed → identical checksum, proven via
 `datadoom verify` and `tests/determinism` (see [testing_guide.md](testing_guide.md)).
@@ -270,20 +281,36 @@ specs live in `testing_guide.md` → "Group G".
 > [testing_guide.md](testing_guide.md) Groups **J** (engine) and **L** (web Graph view).
 > **Phase 2 complete.**
 
-#### Backlog — compliance for integer/discrete/clamped features (deferred)
+#### 11.10 — compliance for integer/discrete/clamped features (chi-square GoF) ✅
 
-Today, when a continuous KS test is not valid (integer `dtype`, a discrete
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 11.10 | Real pass/fail for integer/discrete/clamped features via a chi-square goodness-of-fit against the **effective** PMF (replaces the prior `applicable: False` abstention) | ✅ | 2026-06-03 |
+
+Previously, when a continuous KS test was not valid (integer `dtype`, a discrete
 distribution like poisson, or `min`/`max` clamping that piles mass at the bounds)
-the feature is **reported with its KS stat + empirical moments but marked
-`applicable: False`** and excluded from the score — it *abstains* rather than
-falsely failing (the prior bug scored a correct integer `age` at `0.0`). A future
-enhancement would let those features earn a **real pass** via a goodness-of-fit
-test against the *effective* distribution: a chi-square (or G-test) on binned
-counts versus the truncated-and-discretized PMF, where boundary bins absorb the
-clamped tail mass (`P(min)=F(min+½)`, `P(max)=1−F(max−½)`). That turns "n/a" into
-an actual validated pass/fail for the most common real-world feature shapes
-(ages, counts, bounded scores). Deferred as medium-risk (binning/low-count merge
-rules) and orthogonal to the P2 gate; the current behavior is honest and safe.
+the feature *abstained* — reported with its KS stat + moments but marked
+`applicable: False` and excluded from the score (avoiding the prior bug that
+scored a correct integer `age` at `0.0`). Now those features earn a **real
+verdict** via a chi-square goodness-of-fit against the effective distribution:
+binned counts vs the truncated-and-discretized PMF, where the boundary bins
+absorb the (possibly clamped) tail mass — interior bin `k` → `F(k+½)−F(k−½)`, min
+bin → `F(kmin+½)`, max bin → `1−F(kmax−½)` (for a discrete CDF the ±½ edges
+coincide with the integer steps, so the same formula yields the exact PMF). A
+continuous **clamped float** column is handled with point-mass boundary bins
+(`P(min)=F(min)`, `P(max)=1−F(max)`) plus equal-width interior bins. Sparse bins
+merge by Cochran's rule (`E ≥ 5`); `dof = bins − 1` (no params are fit — they
+come from the spec, so the test stays honest). A feature only abstains now
+(`test: "none"`) when no valid test can be formed (near-constant column).
+`FeatureCompliance` gains `test` (`ks`/`chi2_gof`/`none`) and a `gof` detail
+dict. **Determinism-safe:** compliance lives only in `metadata.json`; the golden
+gate pins `data.csv`, which is unchanged. `engine/dist/compliance.py` + pipeline
+wiring (clamp bounds) + frontend (`Results` "Fit p" column, GoF/χ² chips) + CLI
+summary ("assessed" not "KS-assessed"). Tests: `tests/unit/test_dist.py`
+(poisson/int/clamped earn a pass; wrong-λ GoF rejects; constant abstains),
+`test_pipeline.py`, `test_dataset_audit.py` updated (age + visits now `chi2_gof`
+passes; basic dataset scores 1.0). New author guide:
+[docs_v2/20_YAML_Authoring_Guide.md](docs_v2/20_YAML_Authoring_Guide.md) §11.
 
 ## Detail — Phase 3 (Failure injection — engine done)
 
@@ -331,12 +358,171 @@ rules) and orthogonal to the P2 gate; the current behavior is honest and safe.
 > `examples/failure-fraud.datadoom.yaml`, [testing_guide.md](testing_guide.md)
 > Groups **M** (engine) and **N** (web). **Phase 3 complete.**
 
-## Detail — Phase 4+ (remaining)
+## Detail — Phase 4 (Difficulty targeting — done)
 
-Tasks 15–19 are defined in `docs_v2/17_Implementation_Guide.md` (steps 15–19) and
-`docs_v2/16_Engineering_Roadmap.md` (P4–P6). Next up is **P4 — difficulty
-targeting** (`engine/difficulty/` probes + adaptive loop, then the difficulty UI +
-evaluation report). They will be broken down here as each is picked up.
+> Engine (task **15**) + web difficulty UI (task **16**) delivered. The pipeline
+> grows a `difficulty` stage (… → causal → **difficulty** → failure_injection →
+> compliance → packaging): difficulty calibrates the *clean* frame to a target
+> baseline-AUROC band, then failures corrupt a copy and compliance is assessed on
+> the calibrated data. New core dependency: **scikit-learn** (the baseline probe
+> models) — pinned to a minor line like numpy/mimesis because the probe metric
+> drives the adaptive loop's knob selection and so sits on the
+> determinism-critical path. The `reports.difficulty` JSON column already existed
+> from `0001_init`, so the report lights up with **no migration**.
+
+### 15 — `engine/difficulty/` ✅
+
+> **Knob design (decided with the user):** the *lean default* — a single
+> bisectable "difficulty dial" composed of **feature-observation noise** (primary;
+> blurs numeric predictors, leaving the authored causal graph intact → honest
+> `causal_truth`) then **label flips** (deep-end, engaged when feature noise
+> saturates). The draws are taken once and *scaled* by the dial, so μ(d) is
+> monotone (nested flips, proportional blur) and the bisection is well-posed.
+> `causal` shrink / `imbalance` are recognized but **not** active in v0.1 (rejected
+> by validation with a clear message — no silently-ignored config); see backlog.
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 15.1 | `probes.py` — `ProbeModel` ABC + `logreg`/`tree` (scikit-learn), seeded design matrix (numeric/bool/one-hot/datetime), binary-AUROC metric + reference (linear separability, class balance) | ✅ | degenerate cases (no features / one class) score at chance 0.5, no crash |
+| 15.2 | `knobs.py` — `DifficultyDial`: pre-draws perturbations once, realizes any dial cheaply; feature noise `N(0,(η·sd)²)` (int dtype preserved via round) + nested label flips | ✅ | `noise_to_signal = η²` (05 §5.4) |
+| 15.3 | `calibrate.py` — adaptive bisection on the dial; tier→band map (05 §5.3); bracket + honest-miss fallback (already-harder / too-strong / out-of-iters) with closest-shipped + note | ✅ | `DifficultyResult` (achieved, iters, dial, η, ρ, knobs, reference, trace, note) |
+| 15.4 | Pipeline `difficulty` stage (calibrate clean frame before failures/compliance); `RunResult.difficulty`; `build_report(difficulty=…)` → `reports.difficulty` (no migration) | ✅ | calibrated frame is the shipped clean baseline |
+| 15.5 | `validate.py` — binary-classification label only (boolean / 2-class categorical), known probe, tier-or-band target, knobs ⊆ {noise, label_noise} | ✅ | default spec knobs updated `["noise","label_noise"]` |
+| 15.6 | Tests: probe high/chance/constant, tier mapping, **dial monotonicity** + nested flips, band-hit (intermediate/advanced/kaggle), honest-miss, determinism, validation | ✅ | `tests/unit/test_difficulty.py` (18) |
+| 15.7 | **Audit** (P4 analogue of dataset/failure audits): independent probe reproduces the reported AUROC; feature-noise `Var=σ²(1+η²)`; every tier lands a fresh baseline in band (05 §5.3 / 13 §4); harder tier ⇒ more noise | ✅ | `tests/unit/test_difficulty_audit.py` (8) |
+| 15.8 | `examples/difficulty-credit.datadoom.yaml` (strong credit-default label calibrated to `advanced`) in the determinism gate; CLI `run`/`verify` byte-stable | ✅ | API round-trip test (run → `report.difficulty`) in `tests/api` |
+| 15.9 | scikit-learn pinned core dep + mypy/import-linter clean (engine stays framework-free); **Phase-3 audit** refactored hand-rolled IRLS → scikit-learn `LogisticRegression(C=inf)` now the dep exists | ✅ | suite 165 → 225 |
+
+### 16 — Frontend difficulty UI + evaluation report ✅
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 16.1 | Typed `Difficulty` config + `DifficultyReport` shapes (`lib/types.ts`); `lib/difficulty.ts` (tier metadata/bands, probes, knob meta, labelable-column + default + client validation helpers) | ✅ | mirrors engine tiers/validation |
+| 16.2 | Canvas **Difficulty** view (`DifficultyConfigurator`): enable/disable, tier cards + custom band, AUROC band meter preview, label/probe selects, knob toggles, max-iters, honest explainer + client validation | ✅ | 4th Segmented tab with an enabled dot; contextual aside |
+| 16.3 | Canvas wiring: `difficulty` view + `setDifficulty` (history/autosave), floating-hash hidden | ✅ | `pages/Canvas.tsx` |
+| 16.4 | Results **Difficulty** tab (`DifficultyView`, shown when the run has a target): achieved-vs-target headline + band/met badge, reusable `BandMeter` (0.5–1.0 AUROC, tier bands + marker), how-it-got-there stats (dial/η/ρ/noise-to-signal/separability/balance), active knobs, **bisection trace** table, honest-miss note | ✅ | Evaluation tab's stale "Phase 4" placeholder replaced with the achieved summary |
+| 16.5 | Build into `src/datadoom/webdist/` (tsc strict clean + vite) | ✅ | end-to-end API contract verified over the TestClient |
+
+> **P4 exit gate:** ✅ set `target: kaggle` (or any tier) on a binary label — in the
+> engine/CLI *and* in-browser via the Canvas **Difficulty** view — generate, and a
+> baseline probe lands in the band, reported honestly (achieved metric + iterations
+> + knobs + trace, misses flagged). See `examples/difficulty-credit.datadoom.yaml`,
+> [testing_guide.md](testing_guide.md) Groups **P** (engine) and **Q** (web).
+> **Phase 4 complete.**
+
+#### Backlog — `causal` shrink + `imbalance` difficulty knobs (deferred)
+
+The lean default ships two active knobs (feature noise + label flips). Two more
+were scoped and deliberately deferred (validation rejects them today rather than
+accept dead config): **`causal` shrink** (scale the label's incoming edge weights
+toward 0 — the purest intrinsic-difficulty lever, but it rewrites the generative
+graph so `causal_truth` would report shrunk weights; needs an honest-reporting
+story + SEM re-execution per dial step) and **`imbalance`** (shift the label's
+class balance as a difficulty/secondary lever). Both compose onto the same dial as
+extra leading/secondary regions; deferred as orthogonal to the P4 gate.
+
+## Detail — Phase 5 (Ecosystem — in progress)
+
+> The plugin system (task **17**) is delivered: a plugin is a small class
+> implementing one of the engine ABCs (re-exported as `datadoom.plugin`),
+> discovered at startup and **inserted into the engine's own lookup tables** so it
+> works in the CLI, the API, and the web UI with no core change. The engine never
+> imports `plugins/`; the dependency points the other way (`engine ← plugins`),
+> enforced by a new 4th import-linter contract. Tasks 18–19 (exporters/templates/
+> time-series, then 1.0 hardening) remain.
+
+### 17 — `plugins/` ✅
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 17.1 | `contracts.py` — re-export the 5 ABCs as `datadoom.plugin` + `schema()` helper + `PLUGIN_BASES`/`KEY_ATTR` (exporter keys on `format`, others on `name`) | ✅ | also a thin `datadoom/plugin.py` public shim |
+| 17.2 | `registry.py` — `PluginRegistry`/`PluginRecord`: kind detection (isinstance/issubclass), conflict-fail, `param_schema` validation; registers **into the live engine dicts** (`REGISTRY`/`STRUCTURAL_FNS`/`FAILURE_MODES`/`EXPORTERS`/`PROBES`) so the pipeline picks plugins up by name; `reset()` test aid | ✅ | built-ins seeded from the engine dicts (source `builtin`); mutating in place propagates to every `from … import REGISTRY` reference |
+| 17.3 | `loader.py` — `load_plugins()`: seed built-ins → entry points (`datadoom.plugins` group) → local dir (`$DATADOOM_HOME/plugins/*.py`); broken/duplicate plugins fail loudly | ✅ | reads `$DATADOOM_HOME` from env directly (no `config` import → plugins stays engine-only) |
+| 17.4 | `scaffold.py` — `scaffold_plugin(kind,name,dir)` writes a `datadoom-plugin-*` package (entry point, working stub per kind, contract test, README); `check_object`/`check_plugin` run the contract checks (interface, schema, determinism, **RNG-hygiene static scan** that tokenizes out comments/strings) | ✅ | scaffold → `datadoom plugin check` is green for all 5 kinds |
+| 17.5 | Engine ABCs gain an additive `param_schema` class attr (default `None`) so plugins declare a UI schema; built-ins leave it `None` (native controls) | ✅ | `dist`/`causal`/`failure`/`export`/`difficulty` base classes |
+| 17.6 | API: `GET /api/plugins` returns the live registry; `create_app` loads plugins at startup; `PluginInfo` gains `source`/`builtin` | ✅ | 24 core capabilities over HTTP (6 dist / 5 fn / 8 failure / 3 exporter / 2 probe) |
+| 17.7 | CLI: `datadoom plugin list/new/check`; `run`/`validate`/`verify` load plugins first (headless parity) | ✅ | |
+| 17.8 | Frontend: real **Plugins** gallery (replaces the placeholder) — grouped by kind, source badges, version/schema; `lib/schemaForm.tsx` renders a `param_schema` fragment into controls (09 §6) | ✅ | `api.listPlugins`, `PluginInfo` types; built into `webdist/` (tsc strict + vite) |
+| 17.9 | 4th import-linter contract "plugins depend only on engine" + engine forbidden of `datadoom.plugins`; `tests/plugin_contract/` (16): built-ins register/pass, plugin flows through a run, local-dir + entry-point discovery, conflict-fail, schema/determinism/RNG-hygiene rejection, scaffold→check | ✅ | suite 235 → 251; ruff/mypy/import-linter green |
+
+> **P5 gate (partial):** ✅ install/declare a plugin (entry point or local `.py`) →
+> it appears in `datadoom plugin list`, in `GET /api/plugins`, in the web **Plugins**
+> gallery, and is usable in a run by name — with zero engine change. See
+> [testing_guide.md](testing_guide.md) Group **S**.
+
+### 18 — Exporters + Templates + Time-series + Adapters ✅
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 18.1 | **Exporters (JSON + Parquet)** — `json_exporter.py` (byte-stable records array; numpy/NaN/Timestamp normalized) + `parquet_exporter.py` (lazy `pyarrow`, fixed write opts); `EXPORTERS` registry; pipeline writes every `export.formats` × version; `validate.py` rejects unknown formats; preview falls back csv→json→parquet; `Exporter.extension`/`ext` | ✅ | pyarrow is the optional `[parquet]` extra (errors with an install hint if absent); JSON byte-stable + parquet same-env stable; frontend Generate modal gains an output-formats checklist (CSV locked); `tests/unit/test_export_formats.py` (6) |
+| 18.2 | **Templates** — `src/datadoom/templates/` (loader + typed `CATALOG`, `importlib.resources`) + **8 domain starters** across 8 domains (finance/saas/healthcare/e-commerce/iot/people/marketing/insurance) spanning causal, failures, difficulty, latent, plus quick distribution-only and realistic-text (mimesis) tables; `GET /api/templates` + `/{id}` (full spec); CLI `datadoom template list/show/use`; web **Templates** gallery — a flat responsive grid (one-click → create dataset → Canvas) | ✅ | every template parses+validates+generates (parametrized test-gated over the whole catalog); `tests/unit/test_templates.py` + `tests/api` (3) |
+| 18.3 | **Time-series** — `engine/timeseries.py` (additive `T(t)+S(t)+AR(p)+εₜ`, 05 §6) + `TimeseriesFeature` spec surface + validation (AR stationarity Σ\|φ\|<1, period>0, min/max) + determinism | ✅ | row order is the time axis; root feature, may be a causal parent, never a target, not compliance-assessed; εₜ via `RNG(noise:<name>)`; `examples/timeseries-sensor.datadoom.yaml` in the determinism gate; `tests/unit/test_timeseries.py` (12). Frontend: `timeseries` feature type + Inspector editor (trend/seasonality list/AR/noise/clamp/dtype) + summary/colors |
+| 18.4 | **Framework adapters** — `src/datadoom/adapters/`: `load_dataframe` (pandas, core; auto-detects csv/parquet/json + clean/injected), `to_torch_dataset`/`to_tf_dataset`/`to_hf_dataset` (lazy-imported, optional `[torch]`/`[tf]`/`[hf]` extras with install hints) | ✅ | 5th import-linter contract "adapters depend only on engine"; engine forbidden of `datadoom.adapters`; `tests/unit/test_adapters.py` (pandas paths + importorskip for torch/hf + missing-backend hint) |
+| 18.5 | **AI spec-authoring contract** — `engine/reference.py` `build_capabilities()` (machine-readable manifest of every distribution/fn/failure/tier/feature-type/exporter/provider + rules, built from the **live registries** so plugins appear) + `datadoom spec-reference` CLI + `GET /api/spec-reference` + LLM reference doc | ✅ | `docs_v2/21_LLM_Spec_Authoring_Reference.md` (validated few-shots) + beginner `docs_v2/20_YAML_Authoring_Guide.md`; `tests/unit/test_reference.py` + `tests/api` |
+
+> **P5 gate (full):** ✅ templates + Parquet/JSON exporters + time-series + framework
+> adapters + the AI-authoring manifest all ship. Start from a template, author any
+> feature type (incl. `timeseries`) in the Canvas or by YAML, export CSV/JSON/Parquet,
+> load a run into pandas/torch/tf/HF, and fetch the capabilities manifest for tooling.
+> See [testing_guide.md](testing_guide.md) Groups **T**/**U**. **Phase 5 complete.**
+
+#### 18.6 — Hackathon mode (enterprise template pack + level facet) ✅
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 18.6 | A curated **hackathon** template pack — enterprise-grade ML challenges built by *composition* (no new engine features), plus a `level` catalog facet to surface them | ✅ | 2026-06-03 |
+
+"Hackathon mode" is delivered as a **data-only, additive** layer on the existing
+templates system (task 18.2) — no engine/spec change, honoring the locked
+invariants and "prefer data over a core special-case". Four flagship challenges,
+one per domain, each composing a **deep multi-hop causal DAG**, a **latent
+confounder** (`emit: false`), **mixed feature types**, a **stacked data-quality
+failure profile**, and (where it fits) a **calibrated difficulty band** — i.e. a
+realistic dataset you actually build a model on:
+
+- **`credit-default-challenge`** (Finance) — demographics+employment → income →
+  latent `risk_score` → `defaulted`; calibrated to `advanced` (probe AUROC ≈
+  0.77, ~33% default); MNAR income + MAR/drifting debt-to-income + leaked
+  `collections_flag` + label noise; 80/20 split.
+- **`clinical-deterioration`** (Healthcare) — a **hidden confounder**: latent
+  `severity` drives *both* the observed vitals (HR/lactate/BP) and the outcome,
+  so vitals are confounded proxies; calibrated to `advanced` (AUROC ≈ 0.73, ~33%
+  positive); MNAR/MAR/MCAR clinical missingness.
+- **`predictive-maintenance`** (Industrial IoT) — three additive **time-series**
+  sensor streams + load + grade → latent `wear_index` → `needs_maintenance`
+  (~29%); the load regime **drifts** + gains noise + MCAR, plus a leaked
+  `maintenance_alarm`; row-order is the time axis (no shuffling).
+- **`telecom-churn-challenge`** (Telecom) — **realistic-text** identity fields
+  (mimesis name/email/city) beside the real signal → latent `dissatisfaction` →
+  `churned`; calibrated to the hard `kaggle` band (AUROC ≈ 0.64, ~26% churn);
+  MNAR usage + noisy labels; the identifiers are a drop-the-PII trap.
+
+Each template carries a `meta.challenge` brief (title / task / target / metric /
+difficulty band / train-test split / hidden-structure + gotchas) — free-form
+`meta`, ignored by the engine. **Surfacing:** `TemplateMeta`/`TemplateSummary`
+gain a `level` field (`"starter"` | `"hackathon"`); `datadoom template list`
+gains a `--level` filter and a `[hackathon]` tag; the web **Templates** gallery
+leads with the flagships, adds a Trophy badge + an All/Hackathon/Starter filter.
+All four parse/validate/`run`/`verify` byte-stable and are covered by the
+existing parametrized `tests/unit/test_templates.py` (whole-catalog gate);
+ruff/mypy/import-linter green; full suite 297 green; frontend tsc+vite clean.
+
+## Detail — Phase 5+ (remaining)
+
+**Phase 5 is complete** (tasks 17 + 18, including time-series, framework adapters,
+and the AI spec-authoring contract). **Task 19** (1.0 hardening) is **complete**
+across its three in-scope deliverables (team mode is **deferred** as a future
+addon — see `docs_v2/22` §6):
+
+| ID | Subtask | Status | Notes |
+|---|---|---|---|
+| 19.1 | **Docs site** — `mkdocs.yml` (material theme) + curated `docs_site/` pages that *embed* the authoritative `docs_v2/` sources via the include-markdown plugin (single source of truth); `docs` extra in `pyproject.toml`; `.github/workflows/docs.yml` (`mkdocs build --strict` on PR, `gh-deploy` on main); operator runbook `docs_v2/22` (Pages/PyPI/Docker/release/provenance steps the maintainer runs) | ✅ | `mkdocs build --strict` green locally; site = index/authoring/llm-reference/spec-reference/plugins/architecture/examples; doc index (00) extended to 20–22 |
+| 19.2 | **Release automation + Docker** — `release.yml` (build frontend → wheel/sdist → clean-venv smoke → keyless Sigstore provenance → GitHub Release → PyPI via OIDC trusted publishing → GHCR image) + multi-stage `Dockerfile`/`.dockerignore` (Node stage builds the Canvas, slim Python runtime, non-root, `/data` volume) + non-gating docker build/smoke job in `ci.yml` + CHANGELOG brought current through Phase 5/hardening | ✅ | **Fixed a packaging bug:** the wheel was shipping **without** `webdist` — `python -m build` builds wheel-from-sdist and the sdist dropped the gitignored Canvas, so the `artifacts` glob (wheel-only) had nothing to include. Moved it to `[tool.hatch.build]` so sdist+wheel both force-include it; verified `webdist/index.html` + 17 assets now in both, fresh-venv wheel smoke green (version + deterministic run + Canvas bundled), `twine check` PASSED. Docker image build deferred to CI (local daemon not running); operator steps in `docs_v2/22` §2–4 |
+| 19.3 | **Repro/perf/a11y** — pinned numpy in the repro-matrix CI cells so the golden gate **asserts** (not skips); **platform-keyed** golden checksum (per doc 13: bitwise within an OS/arch, statistical across) with CI emitting each cell's value to record; CI/repro/docs/license badges + README status refresh; perf-budget smoke (marked, non-gating) + CI job; frontend accessibility pass | ✅ | golden checksum re-keyed `numpy-2.4.6` → `Windows-AMD64-numpy-2.4.6`; determinism gate still green |
+
+> **Team mode** (Postgres/S3/Redis + auth + `owner_id`) is intentionally **out of
+> the 1.0 hardening scope** and parked as a future addon (`docs_v2/22` §6,
+> `docs_v2/16` P6/Post-1.0).
 
 ---
 
@@ -344,6 +530,16 @@ evaluation report). They will be broken down here as each is picked up.
 
 | Date | Change |
 |---|---|
+| 2026-06-04 | Delivered **19.3 — repro/perf/accessibility**, completing **task 19** (1.0 hardening; team mode stays deferred). **Repro matrix:** `repro-matrix.yml` now installs a **pinned numpy** (`==2.4.6`, the version the golden checksum was recorded against) so the golden gate **asserts** instead of skipping on version drift, and each cell prints its `platform-numpy` checksum to the job summary for one-time recording. Re-keyed the golden checksum **per platform** (`numpy-2.4.6` → `Windows-AMD64-numpy-2.4.6`) and updated `test_golden_checksum_pinned` accordingly — this matches doc 13's honest scope (**bitwise** within an OS/arch, **statistical** across) instead of a single key that wrongly implied cross-platform byte-identity; unrecorded platforms skip with a copy-pasteable instruction. **Badges + README:** added CI / Reproducibility-Matrix / Docs / Python / License badges and rewrote the stale "Phase 0 in progress" status (now Phases 0–5 + hardening), fixed the nonexistent `iris_like` example and the `verify` usage, and added install/serve/docs. **Perf budget:** new `tests/perf/test_perf_budget.py` (50k-row causal generate under a generous wall-clock + throughput floor), registered the `perf` marker and **deselected it by default** (`addopts = -m 'not perf'`) so it's non-flaky; a non-gating `perf` job + a non-gating `docker` job added to `ci.yml`. **Accessibility:** `Modal` gains a real **focus trap** + focus restore + `role="dialog"`/`aria-modal`/`aria-labelledby` (respecting child `autoFocus`); `Toaster` is now an `aria-live` region (`alert` for errors) with a labelled dismiss; `Layout` gains a **skip-to-content** link, labelled landmarks (Primary/Breadcrumb/Sidebar), a focusable `<main>`, and an `aria-label`/`aria-expanded` collapse toggle; two unlabelled icon-only menu triggers (Dashboard, GenerationsPanel) got `aria-label`s. Frontend rebuilt into `webdist` (tsc strict + vite clean). Full gate green: ruff, mypy (89 files), import-linter 5/5, **pytest 322 passed / 2 skipped / 1 deselected**; determinism gate still green; `pytest -m perf` passes. testing_guide.md gains Group **Z**. |
+| 2026-06-04 | Delivered **19.2 — release automation + Docker**. New `.github/workflows/release.yml` (tag-driven, tokenless): build the web Canvas (Node) → `python -m build` sdist+wheel → `twine check` → smoke the wheel in a clean venv (`datadoom version` + a deterministic run + assert the Canvas is bundled) → **keyless Sigstore build-provenance** (`actions/attest-build-provenance`, OIDC) → GitHub Release → **PyPI via OIDC trusted publishing** (no token, `pypi` environment) → **GHCR** image (`docker/metadata`+`build-push`). New multi-stage `Dockerfile` (`node:20-slim` builds `webdist` → `python:3.11-slim` runtime, non-root `datadoom` user, `/data` volume, binds `0.0.0.0:8000`) + `.dockerignore`; a **non-gating** docker build+smoke job added to `ci.yml`. `CHANGELOG.md` `[Unreleased]` brought current (Phases 1–5 + enhancements + hardening). **Caught and fixed a real packaging bug:** the wheel shipped without `webdist` because `python -m build` builds the wheel *from the sdist* and the sdist dropped the gitignored Canvas (the `artifacts` glob was wheel-target-only); moved `artifacts` to `[tool.hatch.build]` so both sdist and wheel force-include `webdist/**` + `templates/*.yaml`. Verified: `webdist/index.html` + 17 assets present in both sdist & wheel, fresh-venv wheel install smoke green, `twine check` PASSED. (Docker image not built locally — daemon not running; CI covers it.) Suite still **322 passed / 2 skipped**; ruff/mypy/import-linter green. testing_guide.md gains Group **Y**. |
+| 2026-06-04 | Started **task 19 (1.0 hardening)**, broken into 19.1/19.2/19.3; **team mode deferred** as a future addon. Delivered **19.1 — docs site**: a `mkdocs-material` site (`mkdocs.yml`, `docs_dir: docs_site`) whose pages *embed* the authoritative `docs_v2/` sources via the `mkdocs-include-markdown-plugin` (zero duplication — design docs stay the single source of truth). New `docs` optional-dependency group; curated pages (home/quickstart, YAML authoring [embeds doc 20], LLM/agent reference [embeds doc 21], spec reference, plugins, architecture, examples gallery). New `.github/workflows/docs.yml` builds with `mkdocs build --strict` on PRs and `gh-deploy`s to GitHub Pages on `main`. New operator runbook **`docs_v2/22_Release_and_Publishing_Runbook.md`** documents the maintainer-only steps (Pages enablement, PyPI Trusted Publishing via OIDC, GHCR/Docker, keyless Sigstore provenance, badges) — explicitly parking team mode as a future addon. Doc index (`docs_v2/00`) extended to list 20–22; `site/` gitignored. Made the embedded pages **fully strict-clean** (zero warnings): a GitHub-compatible `toc` slugify in `mkdocs.yml` so docs_v2 anchors resolve, one absolute-link fix in doc 21, and a corrected `#13` TOC anchor in doc 20 (the single-dash form was inconsistent with its `#4` sibling and was already broken on GitHub). `mkdocs build --strict` exits 0 locally with no anchor warnings; engine/tests untouched (docs-only). testing_guide.md gains Group **X**. |
+| 2026-06-04 | **Audit report TOC + breadcrumb/error-boundary fix.** (1) `audit_report.md` now opens with a clickable **table of contents** (`engine/audit.py`): a `## Contents` list links to every section and nests per-column entries under the column guide (with issue counts), via GitHub-style heading slugs (`_slug`); the run metadata moved under a linkable `## Overview`. New `test_audit_report_has_navigable_toc` asserts every TOC anchor resolves to a heading. (2) Fixed the stuck **error-boundary**: `ErrorBoundary` took a render error and never cleared it on navigation, so clicking a breadcrumb left the "Reset view" fallback on screen. It now accepts a `resetKey` (the route pathname, passed from `Layout` via `useLocation`) and clears the error in `componentDidUpdate` when the route changes — navigating away recovers the view automatically. Suite **322** green, ruff/mypy clean, frontend tsc+vite rebuilt into `webdist`. |
+| 2026-06-04 | Implemented **E7 — Audit report in the bundle + correct Export naming**. New pure/deterministic `engine/audit.py` renders the full `ReportBundle` (compliance, the **column guide** with per-column stats + data-quality issues + ML advice, injected failures, causal truth, difficulty, determinism checksums) to a timestamp-free `audit_report.md`. The pipeline writes it after `build_report` and registers it as a tracked artifact (`version: "audit"`, `format: "md"`), kept out of the metadata checksum map; it's automatically in the bundle zip and downloadable individually. So the new results now ship **alongside** data/metadata/spec. Also fixed Export naming: the API `Artifact` now carries the authoritative `filename` (basename of the storage URI) so the UI no longer guesses — the **injected** data file shows as `data.injected.csv` (not a second `data.csv`), with clean/injected/spec/audit badges + descriptions, and the audit report leads. Rebuilt `webdist`. Subset-based artifact assertions kept it safe; new `tests/unit/test_audit.py` (4 tests); suite **321** green, ruff/mypy/import-linter clean, frontend tsc+vite clean. testing_guide.md Group F updated. |
+| 2026-06-04 | Implemented **E6 — Locked spec YAML per generation** (version-control reproducibility): the resolved spec (canonical body + baked-in seed), already written to `spec.resolved.yaml` on every run, is now a **tracked, checksummed artifact** (`version: "spec"`, `format: "yaml"`) — appended in `pipeline._package` and kept **out of** the metadata determinism checksum map so `metadata.json` stays byte-identical (golden tests unaffected). New API `GET /api/runs/{id}/spec.yaml` serves it as a download; `RunSummary` now carries `spec_hash` (via a read-only `GenerationRunRow.spec` relationship → serializer), the version-control anchor. Frontend: generation cards show a **🔒 spec `<hash12>`** chip and a **Spec YAML** download button; the ExportModal labels the artifact `spec.resolved.yaml` with a "locked spec" badge (and now names injected variants correctly). All artifact-list assertions used subset checks, so registering the new artifact is safe (CSV stays index 0 for determinism tests). New `test_resolved_spec_is_locked_and_downloadable`; suite **317** green, ruff/mypy/import-linter clean, frontend tsc clean. testing_guide.md gains a Group-H entry. |
+| 2026-06-04 | Implemented **E5 — Column Guide** ("data exploration made simple"): a per-column report card that turns the engine's ground truth into actionable EDA. New pure-engine `engine/profile.py` builds, per shipped/planted column: role (feature/label/derived/leakage_proxy), dtype, summary stats (mean/std/min/p25/median/p75/max/skew for numeric; top categories + class-balance for discrete), causal parents (incl. derived columns), realized **post-injection** snapshot (missing% + moments), and **failure attribution** — which modes hit the column with their realized magnitudes (inverted from the failure diffs). New `engine/advice.py` is a static, deterministic knowledge base mapping each mechanism (+ class imbalance) → plain-language explanation, the single best handling approach, and concrete ML techniques; severity escalates with corruption magnitude and leakage is flagged **critical** ("drop before training"). Best-effort label detection (difficulty.label, else a boolean/categorical causal sink). Wired through `reports.ReportBundle.profile` → `ReportRow.profile` (Alembic **0004_report_profile**) → serializer → `schemas.Report.profile`; pipeline now passes `spec`+`injected` into `build_report`. Frontend: `Report.profile` types + new **Column Guide** tab (`ColumnGuideView.tsx`) with severity-ranked issue cards, stat grids, class-distribution bars, and a highlighted "how to handle it" recommendation per issue. Pure/deterministic (no RNG, no refit — invariants #1/#3/#6 intact); engine imports nothing new (lint-imports 5/5). New `tests/unit/test_profile.py` (16 tests: attribution, stats, determinism, imbalance, advice, fallbacks); full suite **316** green, ruff/mypy clean, frontend tsc clean. testing_guide.md gains the Column-Guide test. |
+| 2026-06-03 | Implemented **task 18.6 — hackathon mode**: a curated, **data-only/additive** enterprise template pack on top of the existing templates system (no engine or spec change). Four flagship challenges — `credit-default-challenge` (Finance; deep DAG → latent risk → `advanced` band + MNAR/MAR/drift/leakage/label-noise), `clinical-deterioration` (Healthcare; latent-severity **confounder** drives vitals *and* outcome + `advanced` band + MNAR/MAR/MCAR), `predictive-maintenance` (IoT; 3 additive **time-series** → latent wear → label + drift/noise/MCAR/leakage), `telecom-churn-challenge` (Telecom; **realistic-text** identity + latent dissatisfaction → hard `kaggle` band + MNAR). Each carries a `meta.challenge` brief (target/metric/split/gotchas). `TemplateMeta`/`TemplateSummary` gain a `level` facet (`starter`\|`hackathon`); `datadoom template list --level` filter + `[hackathon]` tag; web **Templates** gallery leads with flagships + Trophy badge + level filter. Logistic biases tuned so labels are realistic minorities (26–33%) and difficulty bands are met (verified via the engine API). All four validate/`run`/`verify` byte-stable; covered by the existing whole-catalog `test_templates.py`; full suite **297** green; ruff/mypy/import-linter 5/5; frontend tsc+vite clean into `webdist/`. testing_guide.md gains Group **V**. |
+| 2026-06-03 | **Completed Phase 5** (task 18.3/18.4/18.5). **Time-series (18.3):** `engine/timeseries.py` realizes the additive `Xₜ=T(t)+S(t)+AR(p)+εₜ` (05 §6) — vectorised trend+seasonality, sequential AR(p) residual warm-started at 0, εₜ via `RNG(noise:<name>)`. New `TimeseriesFeature` (trend/seasonality[]/ar/noise_std/min/max/dtype) on the discriminated union; validation adds AR stationarity (Σ\|φ\|<1), `period>0`, `min≤max`; allowed as a causal **parent** (float-coercible), never a target, skipped by distribution compliance. `examples/timeseries-sensor.datadoom.yaml` added to the determinism gate; `tests/unit/test_timeseries.py` (12: component math, AR autocorrelation, validation, byte-repro, causal-child recovery). Frontend: `timeseries` feature type + Inspector editor + summary/colors (tsc clean). **Adapters (18.4):** `src/datadoom/adapters/` — `load_dataframe` (pandas, core; auto-detects csv/parquet/json, clean/injected) + `to_torch_dataset`/`to_tf_dataset`/`to_hf_dataset` (lazy-imported behind optional `[torch]`/`[tf]`/`[hf]` extras with install hints). 5th import-linter contract "adapters depend only on engine"; `tests/unit/test_adapters.py` (pandas paths + importorskip + missing-backend hint). **AI authoring (18.5):** `engine/reference.py` `build_capabilities()` — a machine-readable manifest of every distribution/structural-fn/failure/tier/feature-type/exporter/provider + the hard validation rules, built from the **live registries** (so plugins appear); exposed via `datadoom spec-reference` (CLI) and `GET /api/spec-reference`. New docs `docs_v2/20_YAML_Authoring_Guide.md` (beginner) + `docs_v2/21_LLM_Spec_Authoring_Reference.md` (AI contract, all four few-shots validate). `tests/unit/test_reference.py` + `tests/api`. Suite 275 → 297 (+2 skipped torch/hf); ruff/mypy clean; import-linter 5/5; both frontends built into `webdist/`. **Phase 5 complete.** |
+| 2026-06-03 | Implemented backlog **task 11.10** — chi-square goodness-of-fit compliance for integer/discrete/clamped features (see the 11.10 detail above). Suite 272 → 275. New beginner guide `docs_v2/20_YAML_Authoring_Guide.md`. |
 | 2026-06-01 | Phase 0 implemented end-to-end (tasks 0.1–6); all gates green. Status file created. |
 | 2026-06-01 | Switched dev workflow to a project-local `.venv` (Python 3.11). mypy whole-package now clean. Updated testing_guide.md + CLAUDE.md. |
 | 2026-06-01 | Test review: logged task **TH** (correctness-test hardening, TH.1–TH.8) — gaps where a logic bug could pass CI. Specs added to testing_guide.md Group G; implementation pending user go-ahead. |
@@ -361,4 +557,9 @@ evaluation report). They will be broken down here as each is picked up.
 | 2026-06-02 | Added a **critical mathematical audit** for the failure modes (task **13.9**, `tests/unit/test_failure_audit.py`, 14) — the P3 analogue of the Phase-2 dataset audit: generate at n=20k and *recover each mechanism's parameters from the realized frame* rather than eyeballing a rough rate. Empirically verified (n=40k probe): **MAR/MNAR** IRLS logistic regression recovers the `strength` slope (1.50/3.00 → 1.497/3.021) with the calibrated intercept hitting the 0.20 rate; **categorical label_noise** transition matrix is uniform (off-diagonals = p/(k−1) = 0.0667, diagonal = 1−p); **boolean label_noise** flip is class-symmetric and the marginal matches `q(1−p)+(1−q)p`; **feature_noise** ε passes KS-Gaussian (p≈0.98), recovers σ, independent of x; **drift** is an exact linear ramp (max error ~1e-14); **covariate_shift** hits target mean/std to 8 decimals; **leakage** correlation matches the closed form `1/√(1+η²)` to 5 decimals; **MCAR** sits in the binomial 3σ band with Welch-t confirming independence. Suite 151 → 165; all gates green. |
 | 2026-06-03 | Implemented enhancement **E2**: the web **Generation Overview** dashboard tab (default tab on the Results page), composed entirely from the reproducible metadata (spec + report + artifacts) — no engine change. New `OverviewView.tsx`: headline numerals (rows/columns/compliance/failure-modes/seed), a dependency-free SVG **donut** of column-type composition (reusing `TYPE_COLOR`), a **distribution-family** bar list, a conditional **causal-structure** summary (edges/derived/interventions), a conditional **failure-by-mode** bar list, and an **artifacts** table (format/version/human size/short checksum). Also wired realistic-generator authoring into the Canvas: `TextControls` (Inspector) gains a grouped Generator dropdown + Locale select (length inputs only for `lorem`); `lib/types.ts` gains `TextFeature.locale`, `TEXT_GENERATORS`, `TEXT_LOCALES`; `summary.ts` shows locale (not token length) for realistic generators. Frontend builds (tsc strict + vite) clean into `webdist/`. testing_guide.md gains **O1**. |
 | 2026-06-03 | Implemented enhancement **E1**: realistic-but-deterministic text providers backed by *mimesis*. New `engine/dist/providers.py` — a 24-key provider catalog (name/first_name/last_name/email/username/phone/occupation/title/nationality/address/street/city/state/country/postal_code/company/currency/price/url/hostname/ipv4/word/sentence/color) plus `resolve_locale`. mimesis is seeded per-feature from a 32-bit int pulled off the feature's own `RNG(feature:name)` (isolated, non-global), so `(spec_hash, seed)` stays byte-reproducible on the pinned mimesis line — same contract as the numpy pin. `TextFeature` gains optional `generator` (non-`lorem`) + `locale`; `pipeline._sample_feature` dispatches lorem→`sample_text` else `sample_provider`; `validate.py` rejects unknown generator/locale early. Added `mimesis>=19,<20` core dep, `examples/people-realistic.datadoom.yaml` (also in the determinism gate), `tests/unit/test_providers.py` (10). ruff/mypy/import-linter green (engine stays framework-free — mimesis is a pure offline lib). testing_guide.md gains **G5b**. |
+| 2026-06-03 | Implemented enhancement **E4**: web **"Import from YAML"**. New `POST /api/specs/parse` parses raw YAML/JSON text through the same PyYAML loader + `engine.spec` validation the CLI uses (syntax + validation errors → 422 with a `locator`). Dashboard gains a **From YAML** action → `ImportYamlModal` (paste **or** upload/drag a `.yaml`/`.json` → Validate → Import & open Canvas), then the existing Generate flow runs it. `tests/api` +3 (parse ok / syntax-error / validation-error locator). Suite 232 → 235; frontend tsc strict + vite clean. testing_guide.md gains **Q3**. |
+| 2026-06-03 | Implemented enhancement **E3**: **latent features** (`emit: false`) — a feature that drives sampling / the SEM and appears in the true causal graph but is **not shipped** (excluded from the CSV, the difficulty probe, compliance, correlation/MI). Models hidden confounders and latent scores behind a label. Hash-safe: `emit` defaults to `None` and is only canonicalized when explicitly `false`, so existing spec hashes (and the golden checksum) are unchanged. Pipeline drops latents right after the causal stage (before difficulty/failures/compliance/packaging); validation forbids a latent difficulty-label or a failure that references a latent. **Resolves a reviewer-flagged smell** in `examples/difficulty-credit.datadoom.yaml`: `risk_score` (the logit-combining latent) is now `emit: false`, so the probe predicts `defaulted` from genuine observables — no redundant proxy column — while the latent still appears in the true causal graph. (For the record: the prior example didn't actually leak — `risk_score` was an exact linear combo of the roots, R²=1.0, adding 0 to the linear probe; clean AUROC 0.90 not 0.95+, and label noise was never maxed — but shipping a redundant latent was poor hygiene.) New `tests/unit/test_latent.py` (7, incl. hidden-confounder correlation + hash-safety). Frontend: `emit` on feature types, Inspector **Latent (not exported)** toggle, a `latent` table badge, and latents excluded from difficulty label candidates. Suite 225 → 232. testing_guide.md gains Group **R**. |
+| 2026-06-03 | Implemented Phase 4 (tasks **15–16**): **difficulty targeting**. New `engine/difficulty/` — `probes.py` (`ProbeModel` ABC + scikit-learn `logreg`/`tree`, seeded design matrix + binary-AUROC), `knobs.py` (`DifficultyDial`: feature-observation noise → label flips, draws pre-taken and scaled so μ(d) is monotone), `calibrate.py` (adaptive bisection on the dial, tier→band map 05 §5.3, honest-miss fallback). The pipeline grows a `difficulty` stage that calibrates the clean frame to a target baseline-AUROC band before failures/compliance; `RunResult.difficulty` + `reports.difficulty` (column already existed from `0001_init` → **no migration**). Validation restricts to binary-classification labels, known probe, tier-or-band target, knobs ⊆ {noise, label_noise}. **Knob design decided with the user — the lean default** (feature noise primary + label flips deep end; causal shrink/imbalance deferred to backlog). Added **scikit-learn** as a pinned core dep (probe metric is on the determinism-critical path); engine stays framework-free (import-linter green). Refactored the Phase-3 failure audit's hand-rolled IRLS → scikit-learn `LogisticRegression(C=inf)` now the dep exists. Frontend: typed `Difficulty`/`DifficultyReport` + `lib/difficulty.ts`; Canvas **Difficulty** view (`DifficultyConfigurator`: tier cards/custom band, AUROC band meter, label/probe/knobs/iters, honest explainer); Results **Difficulty** tab (`DifficultyView`: achieved-vs-target + `BandMeter`, knob stats, bisection trace) — replaces the Evaluation tab's stale Phase-4 placeholder. New `examples/difficulty-credit.datadoom.yaml` (in the determinism gate); `tests/unit/test_difficulty.py` (18) + `test_difficulty_audit.py` (8) + API round-trip. Suite 165 → 225; ruff/mypy/import-linter green; frontend tsc strict + vite clean into `webdist/`. **P4 exit gate met — Phase 4 complete.** testing_guide.md gains Groups **P**/**Q**. |
 | 2026-06-02 | Implemented Phase 3 frontend (task **14**): the web **Failure Configurator + Comparison**. Canvas gains a third **Failures** view (`FailureConfigurator` + `FailureInspector`) — an ordered, reorderable pipeline of stage cards with a grouped Add-failure menu, type-aware controls (column/driver selects, rate/strength/noise sliders, dist+params, drift schedule, target moments, multi-column chips), live declarative impact estimates, inline validation, a clean-baseline guarantee banner, and an injected-export toggle (auto-enabled on first failure). `lib/failures.ts` holds the mechanism metadata, defaults, summaries, honest impact math, client pre-flight validation, and rename/delete reconciliation. Results gains a **Comparison** tab (`ComparisonView`, shown when the run injected failures): summary pull-stats, per-mode realized-effect cards (authoritative engine diffs as bars/gauges/sparklines), clean-vs-injected distribution overlays, and a cell-level diff table (nullified/changed/planted-column highlights + "changed rows only"). Added `--warning-tint`/`--info-tint` design tokens. Built into `src/datadoom/webdist/` (tsc strict clean); end-to-end API contract verified over HTTP (run → `report.failures` realized stats; `clean`+`injected` artifacts; injected preview carries the planted column + nulls; SPA serves). **P3 exit gate met — Phase 3 complete.** testing_guide.md gains Group **N**. |
+| 2026-06-03 | Implemented Phase 5 task **18.1 + 18.2** — **exporters + templates** (time-series 18.3 + framework adapters 18.4 deferred). **Exporters:** new `engine/export/json_exporter.py` (byte-stable records array; numpy/NaN/Timestamp normalized) and `parquet_exporter.py` (lazy `pyarrow`, fixed write opts, errors with an install hint if the optional `[parquet]` extra is absent); `EXPORTERS` now holds csv/json/parquet. The pipeline's `_package` writes **every** `export.formats` × version (`data.<ext>` / `data.injected.<ext>`), `validate.py` rejects unknown formats (locator `export.formats`), and the preview route falls back csv→json→parquet. Added `Exporter.extension`/`ext`, the `[parquet]` extra (+ pyarrow in dev), and a frontend output-formats checklist in the Generate modal (CSV locked). **Templates:** new `src/datadoom/templates/` (typed `CATALOG` + `importlib.resources` loader) with **8 domain starters** — fraud-detection (causal+failures), customer-churn (difficulty+latent), hospital-readmission (causal+latent), and quick distribution-only/realistic-text tables (e-commerce orders, IoT sensor readings, people directory via mimesis, marketing A/B test, insurance claims with a Pareto heavy tail) — each parametrized-test-gated to parse/validate/generate; `GET /api/templates` + `/{id}` (full spec), CLI `datadoom template list/show/use`, and a web **Templates** gallery rendered as a flat responsive grid with a domain chip per card (one-click → create dataset → Canvas, replacing the placeholder). The plugin registry now seeds **24** built-ins (3 exporters). `tests/unit/test_export_formats.py` (6) + `test_templates.py` (parametrized over the catalog) + `tests/api` (4). Suite 251 → 272; ruff/mypy/import-linter green; both frontends built into `webdist/`. **P5 gate (templates + Parquet) met.** testing_guide.md gains Group **T**. |
+| 2026-06-03 | Implemented Phase 5 task **17** — the **plugin system**. New `src/datadoom/plugins/` (`contracts.py` re-exports the 5 engine ABCs as `datadoom.plugin` + a `schema()` helper; `registry.py` `PluginRegistry`/`PluginRecord` — kind detection, conflict-fail, `param_schema` validation, registers **into the live engine dicts** so the pipeline picks plugins up by name; `loader.py` `load_plugins()` — built-ins → entry points (`datadoom.plugins`) → local `$DATADOOM_HOME/plugins/*.py`; `scaffold.py` `scaffold_plugin` + `check_object`/`check_plugin` contract checks incl. a tokenize-based RNG-hygiene scan) + a `datadoom/plugin.py` public shim. The 5 engine ABCs gain an additive `param_schema` class attr (default `None`). API: `GET /api/plugins` returns the live registry (`PluginInfo` + `source`/`builtin`); `create_app` loads plugins at startup. CLI: `datadoom plugin list/new/check`; `run`/`validate`/`verify` load plugins first. Frontend: real **Plugins** gallery (replaces the placeholder) grouped by kind with source badges + `lib/schemaForm.tsx` rendering a `param_schema` fragment into controls; built into `webdist/`. New 4th import-linter contract "plugins depend only on engine" + engine forbidden of `datadoom.plugins` (engine ← plugins). `tests/plugin_contract/test_plugins.py` (16): built-ins register/pass, a plugin distribution flows through a run (Weibull mean ≈ λ·Γ(1+1/k)), local-dir + entry-point discovery, conflict-fail, schema/determinism/RNG-hygiene rejection, scaffold→check for all 5 kinds. Suite 235 → 251; ruff/mypy/import-linter green; CLI + `GET /api/plugins` verified. **P5 plugin gate met** (declare a plugin → appears in `plugin list`/API/UI and is usable by name, zero engine change). testing_guide.md gains Group **S**. Tasks 18–19 remain. |

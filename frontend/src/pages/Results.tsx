@@ -7,6 +7,8 @@ import { Histogram } from "@/components/Histogram";
 import { CausalGraphView } from "@/components/CausalGraphView";
 import { ComparisonView } from "@/components/ComparisonView";
 import { OverviewView } from "@/components/OverviewView";
+import { ColumnGuideView } from "@/components/ColumnGuideView";
+import { DifficultyView } from "@/components/DifficultyView";
 import { GenerationsPanel } from "@/components/GenerationsPanel";
 import { ExportModal } from "@/components/ExportModal";
 import { api } from "@/lib/api";
@@ -18,9 +20,11 @@ import type { FailuresReport, FeatureCompliance, MatrixReport, Preview, Report, 
 const ALL_TABS = [
   "Overview",
   "Data Preview",
+  "Column Guide",
   "Distributions",
   "Correlation & MI",
   "Causal Graph",
+  "Difficulty",
   "Comparison",
   "Generations",
   "Evaluation",
@@ -54,7 +58,10 @@ export function Results() {
 
   const score = report.data?.compliance_score ?? null;
   const hasFailures = !!(report.data?.failures as FailuresReport | null | undefined)?.count;
-  const tabs = ALL_TABS.filter((t) => t !== "Comparison" || hasFailures);
+  const hasDifficulty = !!report.data?.difficulty;
+  const tabs = ALL_TABS.filter(
+    (t) => (t !== "Comparison" || hasFailures) && (t !== "Difficulty" || hasDifficulty),
+  );
 
   return (
     <div className="h-full overflow-y-auto">
@@ -92,6 +99,11 @@ export function Results() {
                   {(report.data?.failures as FailuresReport | null | undefined)?.count}
                 </span>
               )}
+              {t === "Column Guide" && !!report.data?.profile?.summary.total_issues && (
+                <span className="rounded-pill bg-warning-tint px-1.5 text-[10px] font-semibold text-warning tnum">
+                  {report.data.profile.summary.total_issues}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -107,9 +119,11 @@ export function Results() {
             />
           )}
           {tab === "Data Preview" && <PreviewTab data={preview.data} loading={preview.isLoading} />}
+          {tab === "Column Guide" && <ColumnGuideView profile={report.data?.profile} />}
           {tab === "Distributions" && <DistributionsTab report={report.data} preview={preview.data} />}
           {tab === "Correlation & MI" && <CorrelationTab report={report.data} />}
           {tab === "Causal Graph" && <CausalGraphTab report={report.data} spec={spec.data?.body} datasetId={datasetId} runId={runId} />}
+          {tab === "Difficulty" && <DifficultyView report={report.data?.difficulty} />}
           {tab === "Comparison" && runId && (
             <ComparisonView runId={runId} report={report.data} cleanPreview={preview.data} spec={spec.data?.body} />
           )}
@@ -196,18 +210,27 @@ function DistributionsTab({ report, preview }: { report?: Report | null; preview
               <Histogram values={numericColumn(preview, c.feature)} color={color} />
             </div>
             <div className="mt-2 flex items-center justify-between font-mono text-xs text-text-muted">
-              <span>KS D={c.ks_statistic.toFixed(3)}</span>
+              <span title="Which test decided the verdict">
+                {c.test === "chi2_gof"
+                  ? `χ² ${c.gof ? `${c.gof.bins}b` : "GoF"}`
+                  : c.test === "none"
+                    ? "abstain"
+                    : `KS D=${c.ks_statistic.toFixed(3)}`}
+              </span>
               <span>p={c.p_value.toFixed(3)}</span>
               <span style={{ color }} title={c.note ?? undefined}>{verdict}</span>
             </div>
-            {!applicable && c.note && <p className="mt-1.5 text-[11px] italic text-text-faint">{c.note}</p>}
+            {c.note && <p className="mt-1.5 text-[11px] italic text-text-faint">{c.note}</p>}
           </Card>
         );
       })}
       <p className="col-span-full text-xs italic text-text-faint">
-        A continuous KS test only applies to continuous, un-clamped features; integer, discrete
-        (e.g. poisson), and clamped features are marked <span className="not-italic font-mono">n/a</span> and judged
-        by their empirical moments instead. We report fit honestly and never refit to the sample.
+        Continuous, un-clamped features are judged by a Kolmogorov–Smirnov test against the
+        requested CDF. Integer, discrete (e.g. poisson), and clamped features are judged by a
+        chi-square <span className="not-italic font-mono">goodness-of-fit</span> against the
+        effective PMF (boundary bins absorb the clamped tail). A feature only shows{" "}
+        <span className="not-italic font-mono">n/a</span> when no valid test can be formed. We
+        report fit honestly and never refit to the sample.
       </p>
     </div>
   );
@@ -444,7 +467,7 @@ function EvaluationTab({ report, preview, score }: { report?: Report | null; pre
                 <th className="px-4 py-2">Empirical mean</th>
                 <th className="px-4 py-2">Empirical std</th>
                 <th className="px-4 py-2">Clamped</th>
-                <th className="px-4 py-2">KS p</th>
+                <th className="px-4 py-2">Fit p</th>
               </tr>
             </thead>
             <tbody className="font-mono text-xs tnum">
@@ -471,7 +494,29 @@ function EvaluationTab({ report, preview, score }: { report?: Report | null; pre
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card className="p-5">
           <Kicker>Achieved difficulty</Kicker>
-          <p className="mt-2 text-sm text-text-muted">Probe-based difficulty targeting arrives in Phase 4.</p>
+          {report?.difficulty ? (
+            <div className="mt-2 text-sm text-text-muted">
+              <span className="font-mono text-lg font-semibold text-text tnum">
+                {report.difficulty.achieved_metric.toFixed(3)}
+              </span>{" "}
+              {report.difficulty.metric_name.toUpperCase()} vs target{" "}
+              {report.difficulty.target.band[0].toFixed(2)}–{report.difficulty.target.band[1].toFixed(2)}
+              <span
+                className={clsx(
+                  "ml-2 rounded-pill px-2 py-0.5 text-xs font-semibold",
+                  report.difficulty.band_met ? "bg-success-tint text-success" : "bg-warning-tint text-warning",
+                )}
+              >
+                {report.difficulty.band_met ? "in band" : "closest"}
+              </span>
+              <p className="mt-1.5 text-xs text-text-faint">See the Difficulty tab for the full calibration trace.</p>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-text-muted">
+              No difficulty target was set for this run. Enable difficulty targeting in the Canvas to
+              calibrate to a baseline-AUROC band.
+            </p>
+          )}
         </Card>
         {report?.determinism && (
           <Card className="p-5">

@@ -1,0 +1,57 @@
+datadoom_version: "1"
+name: "transaction-fraud"
+description: >
+  Transaction fraud starter. Customer age and card type drive monthly spend, which
+  drives a fraud-risk label; a stack of realistic failures (under-reported spend,
+  random gaps in age, mislabelled cases) then corrupts a copy — the clean baseline
+  is always kept, so you can compare clean vs. injected in Results.
+seed: 7
+rows: 8000
+
+features:
+  customer_age:
+    type: numeric
+    dist: normal
+    params: { mean: 42, std: 13 }
+    min: 18
+    max: 95
+    dtype: int
+  card_type:
+    type: categorical
+    categories: [standard, gold, platinum]
+    weights: [0.6, 0.3, 0.1]
+  monthly_spend:
+    type: numeric          # derived
+    dtype: float
+    min: 0
+  is_fraud:
+    type: boolean          # derived (target)
+
+causal:
+  edges:
+    - { from: customer_age, to: monthly_spend, fn: linear, weight: 35, bias: 1200 }
+    - { from: card_type,    to: monthly_spend, fn: map, mapping: { standard: 0, gold: 900, platinum: 2600 } }
+    - { from: monthly_spend, to: is_fraud, fn: logistic, weight: -0.0008, bias: 1.2 }
+  noise:
+    monthly_spend: { dist: normal, params: { mean: 0, std: 300 } }
+    is_fraud: { dist: none }
+
+failures:
+  - type: mnar               # big spenders under-report
+    column: monthly_spend
+    rate: 0.10
+    strength: 2.0
+  - type: mcar               # random gaps in age
+    columns: [customer_age]
+    rate: 0.05
+  - type: label_noise        # mislabelled fraud cases
+    column: is_fraud
+    rate: 0.03
+
+export:
+  formats: [csv]
+  versions: [clean, injected]
+
+meta:
+  problem_statement: "Predict is_fraud from customer_age, card_type, monthly_spend under realistic failures."
+  tags: [fraud, causal, failure-injection, classification]

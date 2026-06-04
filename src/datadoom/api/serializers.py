@@ -44,6 +44,7 @@ def run_summary(row: GenerationRunRow) -> schemas.RunSummary:
         run_id=row.run_id,
         dataset_id=row.dataset_id,
         spec_id=row.spec_id,
+        spec_hash=row.spec.spec_hash if row.spec is not None else None,
         name=row.name,
         seed=row.seed,
         status=row.status,
@@ -109,12 +110,17 @@ def dataset(
 
 
 def artifact(row: ArtifactRow) -> schemas.Artifact:
+    # The real on-disk filename is the basename of the storage URI — the
+    # authoritative name (data.csv, data.injected.csv, metadata.json, …) so the
+    # UI never has to guess clean-vs-injected from version/format.
+    filename = row.storage_uri.replace("\\", "/").rsplit("/", 1)[-1]
     return schemas.Artifact(
         artifact_id=row.artifact_id,
         run_id=row.run_id,
         version=row.version,
         split=row.split,
         format=row.format,
+        filename=filename,
         size_bytes=row.size_bytes,
         checksum_sha256=row.checksum_sha256,
         created_at=row.created_at,
@@ -132,5 +138,6 @@ def report(row: ReportRow) -> schemas.Report:
         causal_truth=row.causal_truth,
         difficulty=row.difficulty,
         failures=row.failures,
+        profile=row.profile,
         determinism=row.determinism,
     )

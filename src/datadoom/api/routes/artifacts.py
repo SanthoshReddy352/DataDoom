@@ -56,6 +56,29 @@ def download_artifact(
     )
 
 
+@router.get("/runs/{run_id}/spec.yaml")
+def spec_yaml(
+    run_id: str,
+    s: Session = Depends(get_session),
+    state: AppState = Depends(get_state),
+) -> FileResponse:
+    """Download the locked, resolved spec YAML (spec + baked-in seed) for a run.
+
+    This is the version-control / reproducibility record: the exact spec, with the
+    resolved seed, that produced this generation. Regenerating from it yields
+    byte-identical data.
+    """
+    run = load_run(s, run_id)
+    path = state.artifacts.run_dir(run.dataset_id, run_id) / "spec.resolved.yaml"
+    if not path.exists():
+        raise http_error(404, "not_found", "resolved spec is not available for this run")
+    return FileResponse(
+        path,
+        filename=f"{run_id[:8]}.spec.datadoom.yaml",
+        media_type="application/x-yaml",
+    )
+
+
 @router.get("/runs/{run_id}/report", response_model=Report)
 def get_report(run_id: str, s: Session = Depends(get_session)) -> Report:
     load_run(s, run_id)
@@ -75,15 +98,18 @@ def preview(
     state: AppState = Depends(get_state),
 ) -> PreviewResponse:
     run = load_run(s, run_id)
-    arts = ArtifactRepository(s).list_for_run(run_id)
-    target = next(
-        (
-            a
-            for a in arts
-            if a.format == "csv" and a.version == version and (a.split or "full") == split
-        ),
-        None,
+    arts = [
+        a
+        for a in ArtifactRepository(s).list_for_run(run_id)
+        if a.version == version and (a.split or "full") == split
+    ]
+    # Prefer CSV (always readable); fall back to JSON, then Parquet if that's all
+    # the spec exported. Keeps preview working for non-CSV format selections.
+    priority = {"csv": 0, "json": 1, "parquet": 2}
+    candidates = sorted(
+        (a for a in arts if a.format in priority), key=lambda a: priority[a.format]
     )
+    target = candidates[0] if candidates else None
     if target is None:
         raise http_error(404, "not_found", "no matching data artifact to preview")
 
@@ -91,7 +117,12 @@ def preview(
     if not path.exists():
         raise http_error(404, "not_found", "artifact file is missing on disk")
 
-    frame = pd.read_csv(path, nrows=limit)
+    if target.format == "json":
+        frame = pd.read_json(path).head(limit)
+    elif target.format == "parquet":
+        frame = pd.read_parquet(path).head(limit)
+    else:
+        frame = pd.read_csv(path, nrows=limit)
     spec_row = SpecRepository(s).get(run.spec_id)
     total = (spec_row.body.get("rows") if spec_row else None) or len(frame)
     rows = frame.where(pd.notna(frame), None).values.tolist()

@@ -33,6 +33,18 @@ class ValidateResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ParseTextRequest(BaseModel):
+    """Raw spec text (YAML or JSON) for the web 'New from YAML' import flow."""
+
+    text: str
+
+
+class ParseResponse(BaseModel):
+    valid: bool = True
+    spec_hash: str
+    spec: SpecBody  # the parsed, validated spec body (JSON form)
+
+
 class HashResponse(BaseModel):
     spec_hash: str
 
@@ -70,6 +82,7 @@ class RunSummary(BaseModel):
     run_id: str
     dataset_id: str
     spec_id: str
+    spec_hash: str | None = None
     name: str | None = None
     seed: int
     status: str
@@ -156,6 +169,7 @@ class Artifact(BaseModel):
     version: str
     split: str | None = None
     format: str
+    filename: str
     size_bytes: int
     checksum_sha256: str
     created_at: str
@@ -171,6 +185,7 @@ class Report(BaseModel):
     causal_truth: dict[str, Any] | None = None
     difficulty: dict[str, Any] | None = None
     failures: dict[str, Any] | None = None
+    profile: dict[str, Any] | None = None
     determinism: dict[str, Any] | None = None
 
 
@@ -187,6 +202,11 @@ class TemplateSummary(BaseModel):
     domain: str
     description: str
     tags: list[str] = Field(default_factory=list)
+    level: str = "starter"  # "starter" | "hackathon"
+
+
+class TemplateDetail(TemplateSummary):
+    spec: dict[str, Any]
 
 
 class PluginInfo(BaseModel):
@@ -194,6 +214,8 @@ class PluginInfo(BaseModel):
     kind: str
     version: str | None = None
     schema_: dict[str, Any] | None = Field(default=None, alias="schema")
+    source: str = "builtin"  # builtin | entrypoint | local
+    builtin: bool = True
     enabled: bool = True
 
 

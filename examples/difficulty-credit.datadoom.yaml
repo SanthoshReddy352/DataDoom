@@ -1,0 +1,62 @@
+datadoom_version: "1"
+name: "difficulty-credit"
+description: >
+  P4 difficulty sample: a strongly-separable credit-default label calibrated
+  down to the 'advanced' baseline-AUROC band. Clean, the label is ~0.9 AUROC
+  (too easy); the adaptive loop adds feature-observation noise (and label flips
+  if needed) until a logistic probe lands in [0.72, 0.80] — reported honestly.
+  `risk_score` is a *latent* (emit: false): it combines the drivers into a single
+  logit for the logistic label and shows up in the true causal graph, but is NOT
+  shipped — so the probe predicts `defaulted` from the genuine observables
+  (income, debt_ratio, inquiries), with no redundant proxy column in the data.
+seed: 17
+rows: 6000
+
+features:
+  income:
+    type: numeric
+    dist: normal
+    params: { mean: 60000, std: 20000 }
+    min: 0
+  debt_ratio:
+    type: numeric
+    dist: normal
+    params: { mean: 0.35, std: 0.12 }
+    min: 0
+  inquiries:
+    type: numeric
+    dist: normal
+    params: { mean: 2, std: 1.5 }
+    min: 0
+    dtype: int
+  risk_score:
+    type: numeric          # latent: a weighted combination of the drivers
+    dtype: float
+    emit: false            # hidden — drives the label but is not shipped
+  defaulted:
+    type: boolean          # label (derived): logistic of the risk score
+
+causal:
+  edges:
+    - { from: income,     to: risk_score, fn: linear,   weight: -0.00003 }
+    - { from: debt_ratio, to: risk_score, fn: linear,   weight: 6.0 }
+    - { from: inquiries,  to: risk_score, fn: linear,   weight: 0.5 }
+    - { from: risk_score, to: defaulted,  fn: logistic, weight: 3.0, bias: -0.5 }
+  noise:
+    risk_score: { dist: none }
+    defaulted:  { dist: none }
+
+difficulty:
+  target: advanced          # beginner | intermediate | advanced | kaggle
+  label: defaulted          # the column the baseline probe predicts
+  probe: logreg             # logreg | tree
+  max_iters: 10
+  knobs: [noise, label_noise]
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Predict defaulted from income, debt_ratio, inquiries (risk_score is latent)."
+  tags: [difficulty, causal, classification, latent]

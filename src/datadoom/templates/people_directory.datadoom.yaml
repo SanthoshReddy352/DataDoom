@@ -1,0 +1,56 @@
+datadoom_version: "1"
+name: "people-directory"
+description: >
+  People directory starter — realistic-but-deterministic identities via the
+  bundled mimesis providers (name, email, phone, company, job, city, country).
+  Same (spec_hash, seed) → byte-identical strings. Ideal for demos and UIs that
+  need believable names and contact details.
+seed: 42
+rows: 3000
+
+features:
+  full_name:
+    type: text
+    generator: name
+  email:
+    type: text
+    generator: email
+  phone:
+    type: text
+    generator: phone
+  company:
+    type: text
+    generator: company
+  job_title:
+    type: text
+    generator: occupation
+  city:
+    type: text
+    generator: city
+  country:
+    type: text
+    generator: country
+  age:
+    type: numeric
+    dist: normal
+    params: { mean: 38, std: 12 }
+    min: 18
+    max: 85
+    dtype: int
+  plan:
+    type: categorical
+    categories: [free, pro, enterprise]
+    weights: [0.7, 0.25, 0.05]
+  signup_date:
+    type: datetime
+    start: "2021-01-01"
+    end: "2024-12-31"
+    granularity: day
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Believable people records (names, emails, companies) for demos and UIs."
+  tags: [people, realistic-text, pii-like]

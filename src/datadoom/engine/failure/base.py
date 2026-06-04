@@ -95,6 +95,8 @@ class FailureMode(ABC):
     """ABC for a corruption transform (05 §4)."""
 
     name: str
+    # Optional JSON-schema fragment for the failure params (09 §6); ``None`` for built-ins.
+    param_schema: Mapping[str, Any] | None = None
 
     def validate(
         self, params: Mapping[str, Any], features: Mapping[str, Feature], locator: str

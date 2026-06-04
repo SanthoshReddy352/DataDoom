@@ -41,3 +41,42 @@ jobs:
         run: lint-imports
       - name: Tests
         run: pytest
+
+  perf:
+    name: perf budget
+    runs-on: ubuntu-latest
+    # Non-gating: wall-clock budgets are informational and must not block a merge
+    # on runner jitter, but a real regression (e.g. an O(n^2) hot path) shows red.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Perf budget
+        run: pytest -m perf -v
+
+  docker:
+    name: docker image build + smoke
+    runs-on: ubuntu-latest
+    # Non-gating: a Docker/registry hiccup must not block a code merge, but a
+    # broken Dockerfile still shows up red on the PR.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: datadoom:ci
+      - name: Smoke (CLI + bundled web Canvas)
+        run: |
+          docker run --rm datadoom:ci datadoom version
+          docker run --rm datadoom:ci python -c "import importlib.resources as r; assert (r.files('datadoom') / 'webdist' / 'index.html').is_file(); print('web Canvas bundled OK')"

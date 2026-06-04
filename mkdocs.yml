@@ -1,0 +1,68 @@
+site_name: DataDoom
+site_description: Local-first, open-source engine for controllable, reproducible synthetic data.
+site_url: https://santhoshreddy352.github.io/datadoom/
+repo_url: https://github.com/SanthoshReddy352/datadoom
+repo_name: SanthoshReddy352/datadoom
+copyright: Apache-2.0 licensed.
+
+# Curated public site. The deep references are *included* from the authoritative
+# docs_v2/ sources (single source of truth) via the include-markdown plugin.
+docs_dir: docs_site
+
+theme:
+  name: material
+  palette:
+    # "Paper" light is the product's default surface; offer an Ink dark toggle.
+    - scheme: default
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark
+    - scheme: slate
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to light
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - content.code.copy
+    - search.suggest
+    - toc.follow
+
+plugins:
+  - search
+  - include-markdown
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+      # GitHub-compatible heading slugs so anchors authored in the embedded
+      # docs_v2/ sources (e.g. "#4-features--the-columns") resolve in the site.
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  - Authoring:
+      - YAML authoring guide: authoring.md
+      - LLM / agent reference: llm-reference.md
+      - Spec reference: spec-reference.md
+  - Extending:
+      - Plugin system: plugins.md
+  - Reference:
+      - Architecture: architecture.md
+      - Examples gallery: examples.md

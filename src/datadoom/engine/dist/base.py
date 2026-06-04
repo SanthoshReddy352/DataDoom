@@ -19,6 +19,10 @@ from ..errors import SpecValidationError
 class Distribution(ABC):
     name: str
     required_params: tuple[str, ...] = ()
+    # Optional JSON-schema fragment for the feature `params`. Built-ins leave this
+    # ``None`` (the Canvas renders their native controls); plugins declare one so
+    # the UI can render config controls with no frontend work (09 §6).
+    param_schema: Mapping[str, object] | None = None
 
     @abstractmethod
     def sample(self, rng: np.random.Generator, n: int, params: Mapping[str, float]) -> np.ndarray:

@@ -17,7 +17,7 @@ precision:
 The stochastic mechanisms are audited by **parameter recovery**:
 
 * ``mcar``             — rate inside the binomial 3σ band + independence (Welch t).
-* ``mar`` / ``mnar``   — IRLS logistic regression recovers the ``strength`` slope
+* ``mar`` / ``mnar``   — logistic regression (scikit-learn) recovers ``strength``
                          *and* the calibrated intercept reproduces the rate.
 * ``label_noise``      — boolean: symmetric flip + marginal ``q(1-p)+(1-q)p``;
                          categorical: the reassignment transition matrix is
@@ -30,6 +30,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from scipy import stats
+from sklearn.linear_model import LogisticRegression
 
 from datadoom.engine import generate, parse_spec
 
@@ -68,22 +69,17 @@ def _z(v: np.ndarray) -> np.ndarray:
     return (v - v.mean()) / v.std()
 
 
-def _irls_logit(z: np.ndarray, m: np.ndarray, iters: int = 60) -> tuple[float, float]:
-    """Newton-Raphson fit of P(m=1) = sigmoid(b0 + b1·z). Returns (b0, b1).
+def _logit_mle(z: np.ndarray, m: np.ndarray) -> tuple[float, float]:
+    """Unregularized logistic MLE of P(m=1) = sigmoid(b0 + b1·z). Returns (b0, b1).
 
-    Pure numpy (no sklearn dependency): recovers the logistic missingness slope
-    so MAR/MNAR can be checked against their declared ``strength``.
+    scikit-learn is now a project dependency (it powers the P4 difficulty probes),
+    so the audit fits the missingness model with it — ``C=np.inf`` (no
+    regularization) gives the same maximum-likelihood slope a hand-rolled IRLS
+    would, used to check MAR/MNAR against their declared ``strength``.
     """
-    X = np.column_stack([np.ones_like(z), z])
-    beta = np.zeros(2)
-    for _ in range(iters):
-        p = 1.0 / (1.0 + np.exp(-(X @ beta)))
-        w = np.clip(p * (1.0 - p), 1e-9, None)
-        step = np.linalg.solve(X.T @ (w[:, None] * X), X.T @ (m - p))
-        beta = beta + step
-        if np.max(np.abs(step)) < 1e-11:
-            break
-    return float(beta[0]), float(beta[1])
+    model = LogisticRegression(C=np.inf, solver="lbfgs", max_iter=1000)
+    model.fit(np.asarray(z, dtype=float).reshape(-1, 1), np.asarray(m).astype(int))
+    return float(model.intercept_[0]), float(model.coef_[0, 0])
 
 
 # --- 1. MCAR: rate + independence ---------------------------------------------------
@@ -112,7 +108,7 @@ def test_mar_recovers_logistic_slope_and_rate(strength) -> None:
         [{"type": "mar", "column": "y", "rate": 0.2, "driver": "x", "strength": strength}]
     )
     m = inj["y"].isna().to_numpy().astype(float)
-    _b0, b1 = _irls_logit(_z(clean["x"].to_numpy()), m)
+    _b0, b1 = _logit_mle(_z(clean["x"].to_numpy()), m)
     # Slope recovers the declared strength; the column nullified is independent
     # of the driver's scale because missingness is driven purely by x.
     assert b1 == pytest.approx(strength, abs=0.12)
@@ -126,7 +122,7 @@ def test_mar_recovers_logistic_slope_and_rate(strength) -> None:
 def test_mnar_recovers_self_dependence_slope(strength) -> None:
     clean, inj = _run([{"type": "mnar", "column": "x", "rate": 0.2, "strength": strength}])
     m = inj["x"].isna().to_numpy().astype(float)
-    _b0, b1 = _irls_logit(_z(clean["x"].to_numpy()), m)
+    _b0, b1 = _logit_mle(_z(clean["x"].to_numpy()), m)
     assert b1 == pytest.approx(strength, abs=0.12)
     assert m.mean() == pytest.approx(0.2, abs=0.01)
 

@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, FolderClock, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
+import { Download, FileCode, FolderClock, Lock, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, IconButton, Kicker, Menu, MenuItem, Spinner, StatusBadge } from "./ui";
 import { Field, Modal, TextInput } from "./Modal";
 import { api } from "@/lib/api";
 import { toast } from "@/store/toast";
+import { confirmDialog } from "@/store/confirm";
 import { clsx } from "@/lib/clsx";
 import type { RunSummary } from "@/lib/types";
 
@@ -116,6 +117,15 @@ export function GenerationsPanel({
                     </>
                   )}
                 </div>
+                {r.spec_hash && (
+                  <div
+                    className="mt-1.5 flex w-fit items-center gap-1.5 rounded-pill bg-surface-2 px-2 py-0.5 font-mono text-[10px] text-text-faint"
+                    title="The exact spec that produced this run is locked. Regenerate from it for byte-identical data."
+                  >
+                    <Lock size={10} />
+                    spec {r.spec_hash.slice(0, 12)}
+                  </div>
+                )}
               </div>
               <StatusBadge status={r.status} />
             </div>
@@ -128,13 +138,20 @@ export function GenerationsPanel({
                 </Button>
               )}
               {r.status === "completed" && (
+                <a href={api.specYamlUrl(r.run_id)} download title="Download the locked, resolved spec YAML">
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs">
+                    <FileCode size={14} /> Spec YAML
+                  </Button>
+                </a>
+              )}
+              {r.status === "completed" && (
                 <a href={api.bundleUrl(r.run_id)} download>
                   <Button variant="ghost" className="px-3 py-1.5 text-xs">
                     <Download size={14} /> Download
                   </Button>
                 </a>
               )}
-              <Menu trigger={({ toggle }) => <IconButton onClick={toggle}><MoreHorizontal size={16} /></IconButton>}>
+              <Menu trigger={({ toggle }) => <IconButton onClick={toggle} aria-label="More actions"><MoreHorizontal size={16} /></IconButton>}>
                 {(close) => (
                   <>
                     <MenuItem icon={<Pencil size={14} />} onClick={() => { close(); setRenaming(r); }}>
@@ -143,9 +160,17 @@ export function GenerationsPanel({
                     <MenuItem
                       icon={<Trash2 size={14} />}
                       danger
-                      onClick={() => {
+                      onClick={async () => {
                         close();
-                        if (confirm(`Delete generation "${label}"? Its artifacts are removed.`)) del.mutate(r.run_id);
+                        if (
+                          await confirmDialog({
+                            title: `Delete "${label}"?`,
+                            message: "This generation and its artifacts will be permanently removed.",
+                            confirmLabel: "Delete",
+                            tone: "danger",
+                          })
+                        )
+                          del.mutate(r.run_id);
                       }}
                     >
                       Delete

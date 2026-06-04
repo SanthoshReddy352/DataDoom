@@ -60,6 +60,24 @@ export function featureSettings(feature: Feature): SettingRow[] {
       }
       return rows;
     }
+    case "timeseries": {
+      const rows: SettingRow[] = [{ label: "series", value: "T+S+AR+ε", tone: "accent" }];
+      if (feature.trend && (feature.trend.slope || feature.trend.intercept)) {
+        rows.push({ label: "trend", value: `${num(feature.trend.slope)}·t + ${num(feature.trend.intercept)}` });
+      }
+      const seasons = feature.seasonality ?? [];
+      if (seasons.length) rows.push({ label: "seasons", value: seasons.map((s) => num(s.period)).join(", ") });
+      if (feature.ar?.length) rows.push({ label: "AR(p)", value: `p=${feature.ar.length}` });
+      rows.push({ label: "noise σ", value: num(feature.noise_std ?? 1) });
+      if (feature.min != null || feature.max != null) {
+        rows.push({
+          label: "clamp",
+          value: `${feature.min != null ? num(feature.min) : "−∞"} … ${feature.max != null ? num(feature.max) : "∞"}`,
+        });
+      }
+      rows.push({ label: "dtype", value: feature.dtype ?? "float" });
+      return rows;
+    }
     default:
       return [];
   }

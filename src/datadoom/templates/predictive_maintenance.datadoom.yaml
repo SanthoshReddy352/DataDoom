@@ -1,0 +1,107 @@
+datadoom_version: "1"
+name: "predictive-maintenance"
+description: >
+  HACKATHON — turbine predictive maintenance on multi-sensor TIME-SERIES. Three
+  additive sensor streams (vibration, bearing temperature, oil pressure) run over
+  the row index (row order IS time): each carries trend + operational seasonality +
+  AR(1) autocorrelation + noise. Together with the operating `load_factor` and the
+  `component_grade` they drive a LATENT `wear_index` (emit: false) behind a
+  `needs_maintenance` label. A realistic operations stack then corrupts a copy:
+  the load regime DRIFTS upward over time, the load sensor gains noise and drops
+  readings (MCAR), and a `maintenance_alarm` is planted as a LEAKED proxy of the
+  label. This is a sequential problem — preserve row order; do not shuffle the
+  series across the train/test boundary.
+seed: 303
+rows: 4500
+
+features:
+  vibration:
+    type: timeseries       # mm/s RMS — slow upward trend as the unit wears
+    trend: { slope: 0.0009, intercept: 2.0 }
+    seasonality:
+      - { amplitude: 0.45, period: 24, phase: 0.0 }    # daily duty cycle
+    ar: [0.5]
+    noise_std: 0.2
+    dtype: float
+  bearing_temp:
+    type: timeseries       # °C — daily + weekly cycle on a warming trend
+    trend: { slope: 0.0018, intercept: 64.0 }
+    seasonality:
+      - { amplitude: 4.0, period: 24, phase: 0.0 }
+      - { amplitude: 1.5, period: 168, phase: 1.0 }
+    ar: [0.6]
+    noise_std: 1.0
+    dtype: float
+  oil_pressure:
+    type: timeseries       # bar — gently declining as seals degrade
+    trend: { slope: -0.0011, intercept: 45.0 }
+    ar: [0.4]
+    noise_std: 0.7
+    dtype: float
+  load_factor:
+    type: numeric          # 0..1 operating load (root; the failures target this)
+    dist: normal
+    params: { mean: 0.68, std: 0.14 }
+    min: 0
+    max: 1
+  component_grade:
+    type: categorical
+    categories: [economy, standard, premium]
+    weights: [0.4, 0.4, 0.2]
+  wear_index:
+    type: numeric          # LATENT degradation index — the true driver
+    dtype: float
+    emit: false
+  needs_maintenance:
+    type: boolean          # label (derived): logistic of wear_index
+
+causal:
+  edges:
+    - { from: vibration,       to: wear_index, fn: linear, weight: 0.9 }
+    - { from: bearing_temp,    to: wear_index, fn: linear, weight: 0.03 }
+    - { from: oil_pressure,    to: wear_index, fn: linear, weight: -0.04 }
+    - { from: load_factor,     to: wear_index, fn: linear, weight: 1.3 }
+    - { from: component_grade, to: wear_index, fn: map,    mapping: { economy: 0.8, standard: 0.0, premium: -0.6 } }
+    - { from: wear_index,      to: needs_maintenance, fn: logistic, weight: 1.1, bias: -6.8 }
+  noise:
+    wear_index: { dist: none }
+    needs_maintenance: { dist: none }
+
+failures:
+  - type: drift              # load regime creeps up over the campaign
+    column: load_factor
+    schedule: { kind: linear, magnitude: 0.18 }
+  - type: feature_noise      # sensor noise on the load reading
+    column: load_factor
+    dist: normal
+    params: { mean: 0, std: 0.04 }
+  - type: mcar               # dropped telemetry on load
+    columns: [load_factor]
+    rate: 0.05
+  - type: leakage            # an alarm that is essentially the label — drop it
+    target: needs_maintenance
+    into: maintenance_alarm
+    noise: 0.06
+
+export:
+  formats: [csv]
+  versions: [clean, injected]
+
+meta:
+  level: hackathon
+  challenge:
+    title: "Predict turbine maintenance needs from sensor streams"
+    task: classification
+    target: needs_maintenance
+    metric: ROC-AUC / PR-AUC (class-imbalanced)
+    time_axis: row_order
+    hidden_structure: >
+      wear_index is latent and accumulates from the sensor streams + load + grade.
+      The series are autocorrelated — vibration/temp trend up, oil pressure trends
+      down as the unit degrades.
+    gotchas:
+      - "Row order is the time axis — do NOT shuffle across the train/test split."
+      - "load_factor drifts and is noisy/MCAR in the injected copy — a covariate-shift between early and late rows."
+      - "maintenance_alarm is a leaked proxy of the label — drop it."
+      - "Positive class is the minority — prefer PR-AUC over plain accuracy."
+  tags: [iot, predictive-maintenance, time-series, causal, latent, drift, leakage, classification]

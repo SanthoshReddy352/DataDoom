@@ -5,12 +5,20 @@ interface State {
   error: Error | null;
 }
 
+interface Props {
+  children: ReactNode;
+  // Changes whenever the route changes (e.g. the pathname). When it changes we
+  // clear a caught error, so navigating away (breadcrumbs, sidebar) recovers the
+  // view instead of leaving the fallback stuck on screen.
+  resetKey?: string;
+}
+
 /**
  * Scoped boundary around the routed page area. A render error in one view (e.g.
  * the canvas) shows a recoverable fallback instead of unmounting the whole app
  * to a blank screen — the chrome (sidebar/header) stays intact.
  */
-export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
+export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
@@ -20,6 +28,13 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   componentDidCatch(error: Error) {
     // eslint-disable-next-line no-console
     console.error("View error:", error);
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    // A navigation happened while showing the fallback → recover automatically.
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
   }
 
   render() {

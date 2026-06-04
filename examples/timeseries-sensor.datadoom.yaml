@@ -1,0 +1,37 @@
+datadoom_version: "1"
+name: "timeseries-sensor"
+description: >
+  P5 time-series sample (05 §6): an additive series Xₜ = T(t) + S(t) + AR(p) + εₜ.
+  `temperature` carries a daily + weekly seasonality on a gentle upward trend with
+  an AR(1) residual; `reading` is a sensor value driven causally by temperature
+  (linear) plus its own noise. Row order IS the time axis — the pipeline preserves it.
+seed: 7
+rows: 2000
+
+features:
+  temperature:
+    type: timeseries
+    trend: { slope: 0.002, intercept: 20.0 }      # +0.002 °C per step, start 20 °C
+    seasonality:
+      - { amplitude: 6.0, period: 24, phase: 0.0 }   # daily cycle (24 steps)
+      - { amplitude: 2.0, period: 168, phase: 1.5 }  # weekly cycle (168 steps)
+    ar: [0.5]                                        # AR(1): smooth autocorrelation
+    noise_std: 0.8
+    dtype: float
+  reading:
+    type: numeric            # derived: a linear sensor response to temperature
+    dtype: float
+
+causal:
+  edges:
+    - { from: temperature, to: reading, fn: linear, weight: 1.8, bias: 5.0 }
+  noise:
+    reading: { dist: normal, params: { mean: 0, std: 0.5 } }
+
+export:
+  formats: [csv]
+  versions: [clean]
+
+meta:
+  problem_statement: "Forecast/clean a seasonal sensor reading over time."
+  tags: [time-series, causal, regression]

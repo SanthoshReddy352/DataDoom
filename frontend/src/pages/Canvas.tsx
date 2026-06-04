@@ -6,6 +6,7 @@ import {
   Droplets,
   Eye,
   EyeOff,
+  Gauge,
   GitBranch,
   History,
   PanelRightClose,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, CopyableHash, IconButton, Segmented, Spinner } from "@/components/ui";
+import { Button, CopyableHash, IconButton, Kicker, Segmented, Spinner } from "@/components/ui";
 import { Field, Modal, TextInput } from "@/components/Modal";
 import { Inspector } from "@/components/Inspector";
 import { TableCanvas } from "@/components/TableCanvas";
@@ -25,6 +26,7 @@ import { CausalGraphEditor } from "@/components/CausalGraphEditor";
 import { CausalInspector, type CausalSelection } from "@/components/CausalInspector";
 import { FailureConfigurator } from "@/components/FailureConfigurator";
 import { FailureInspector } from "@/components/FailureInspector";
+import { DifficultyConfigurator } from "@/components/DifficultyConfigurator";
 import { SpecDrawer } from "@/components/SpecDrawer";
 import { GenerationsDrawer } from "@/components/GenerationsPanel";
 import { api, ApiError } from "@/lib/api";
@@ -36,7 +38,7 @@ import { useSpecHistory } from "@/lib/useHistory";
 import { useChrome } from "@/store/chrome";
 import { toast } from "@/store/toast";
 import { clsx } from "@/lib/clsx";
-import type { CausalGraph, Dataset, Failure, Feature, Spec } from "@/lib/types";
+import type { CausalGraph, Dataset, Difficulty, Failure, Feature, Spec } from "@/lib/types";
 
 export function Canvas() {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +53,7 @@ export function Canvas() {
   });
 
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<"table" | "graph" | "failures">("table");
+  const [view, setView] = useState<"table" | "graph" | "failures" | "difficulty">("table");
   const [causalSel, setCausalSel] = useState<CausalSelection>(null);
   const [failureSel, setFailureSel] = useState<number | null>(null);
   const [saved, setSaved] = useState(true);
@@ -256,6 +258,14 @@ export function Canvas() {
       boolean: { type: "boolean", rate: 0.5 },
       datetime: { type: "datetime", start: "2020-01-01", end: "2024-12-31", granularity: "day" },
       text: { type: "text", generator: "lorem", length: { min: 5, max: 30 } },
+      timeseries: {
+        type: "timeseries",
+        trend: { slope: 0.01, intercept: 0 },
+        seasonality: [{ amplitude: 1, period: 24, phase: 0 }],
+        ar: [0.5],
+        noise_std: 1,
+        dtype: "float",
+      },
     };
     setFeature(name, defaults[t]);
   }
@@ -317,6 +327,17 @@ export function Canvas() {
     hist.set({ ...spec!, export: exp });
   }
 
+  function exportFormats(): string[] {
+    const f = (spec!.export as { formats?: string[] } | null | undefined)?.formats;
+    return Array.isArray(f) && f.length ? f : ["csv"];
+  }
+
+  function setExportFormats(formats: string[]) {
+    // CSV always ships — it backs preview + the determinism checksum.
+    const withCsv = formats.includes("csv") ? formats : ["csv", ...formats];
+    hist.set({ ...spec!, export: { ...(spec!.export ?? {}), formats: withCsv } });
+  }
+
   function setFailures(failures: Failure[]) {
     const wasEmpty = (spec!.failures?.length ?? 0) === 0;
     let next: Spec = { ...spec!, failures };
@@ -327,6 +348,10 @@ export function Canvas() {
       next = { ...next, export: { ...(spec!.export ?? {}), versions } };
     }
     hist.set(next);
+  }
+
+  function setDifficulty(difficulty: Difficulty | null) {
+    hist.set({ ...spec!, difficulty });
   }
 
   return (
@@ -348,6 +373,17 @@ export function Canvas() {
                     <span className="ml-0.5 rounded-pill bg-primary px-1.5 text-[10px] font-semibold leading-tight text-white tnum">
                       {spec.failures!.length}
                     </span>
+                  )}
+                </>
+              ),
+            },
+            {
+              value: "difficulty",
+              label: (
+                <>
+                  <Gauge size={14} /> Difficulty
+                  {spec.difficulty && (
+                    <span className="ml-0.5 h-1.5 w-1.5 rounded-pill bg-primary" aria-label="enabled" />
                   )}
                 </>
               ),
@@ -427,7 +463,9 @@ export function Canvas() {
       {/* Body */}
       <div className="grid min-h-0 flex-1 grid-cols-1" style={{ gridTemplateColumns: inspectorOpen ? "1fr 372px" : "1fr 0px" }}>
         <div className="relative min-h-0">
-          {view === "failures" ? (
+          {view === "difficulty" ? (
+            <DifficultyConfigurator spec={spec} onChange={setDifficulty} />
+          ) : view === "failures" ? (
             <FailureConfigurator
               spec={spec}
               selected={failureSel}
@@ -469,7 +507,7 @@ export function Canvas() {
           <div
             className={clsx(
               "pointer-events-none absolute right-3 top-3 flex flex-wrap justify-end gap-2",
-              view === "failures" && "hidden",
+              (view === "failures" || view === "difficulty") && "hidden",
             )}
           >
             <div className="pointer-events-auto">
@@ -489,7 +527,27 @@ export function Canvas() {
             inspectorOpen ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >
-          {view === "failures" ? (
+          {view === "difficulty" ? (
+            <div className="space-y-4 p-6 text-sm leading-relaxed text-text-muted">
+              <div>
+                <Kicker>About difficulty</Kicker>
+                <p className="mt-2">
+                  Difficulty is <em>empirical</em>: the engine trains a baseline probe on a held-out split
+                  and tunes the data until its AUROC lands in your target band.
+                </p>
+              </div>
+              <p>
+                It turns one bisection dial — <strong>feature-observation noise</strong> first (blurs the
+                numeric predictors, leaving your causal graph intact), then <strong>label flips</strong> as
+                the deep end. The clean baseline is captured before any of this.
+              </p>
+              <p className="text-text-faint">
+                The achieved AUROC, iterations, and final knob values are reported on the run's
+                <strong className="font-medium text-text-muted"> Difficulty</strong> tab — honestly, misses
+                and all.
+              </p>
+            </div>
+          ) : view === "failures" ? (
             failureSel != null && spec.failures?.[failureSel] ? (
               <FailureInspector
                 failure={spec.failures[failureSel]}
@@ -545,6 +603,8 @@ export function Canvas() {
         hasFailures={(spec.failures?.length ?? 0) > 0}
         defaultApply={exportInjected}
         pending={generate.isPending}
+        formats={exportFormats()}
+        onFormats={setExportFormats}
         onClose={() => setGenerateOpen(false)}
         onConfirm={(name, applyFailures) => generate.mutate({ name, applyFailures })}
       />
@@ -552,12 +612,20 @@ export function Canvas() {
   );
 }
 
+const OUTPUT_FORMATS: { id: string; label: string; hint: string }[] = [
+  { id: "csv", label: "CSV", hint: "always — backs preview + the determinism checksum" },
+  { id: "json", label: "JSON", hint: "records array, pandas-readable" },
+  { id: "parquet", label: "Parquet", hint: "columnar; needs the parquet extra" },
+];
+
 function GenerateModal({
   open,
   defaultName,
   hasFailures,
   defaultApply,
   pending,
+  formats,
+  onFormats,
   onClose,
   onConfirm,
 }: {
@@ -566,11 +634,18 @@ function GenerateModal({
   hasFailures: boolean;
   defaultApply: boolean;
   pending: boolean;
+  formats: string[];
+  onFormats: (f: string[]) => void;
   onClose: () => void;
   onConfirm: (name: string, applyFailures: boolean) => void;
 }) {
   const [name, setName] = useState("");
   const [applyFailures, setApplyFailures] = useState(true);
+
+  function toggleFormat(id: string) {
+    if (id === "csv") return; // CSV is mandatory
+    onFormats(formats.includes(id) ? formats.filter((f) => f !== id) : [...formats, id]);
+  }
 
   useEffect(() => {
     if (open) {
@@ -625,6 +700,36 @@ function GenerateModal({
           </span>
         </label>
       )}
+
+      <div className="mt-4">
+        <div className="kicker mb-2">Output formats</div>
+        <div className="flex flex-col gap-1.5">
+          {OUTPUT_FORMATS.map((f) => {
+            const checked = f.id === "csv" || formats.includes(f.id);
+            return (
+              <label
+                key={f.id}
+                className={clsx(
+                  "flex items-center gap-2.5 rounded-control border px-3 py-2",
+                  f.id === "csv"
+                    ? "cursor-default border-border bg-surface-2/60"
+                    : "cursor-pointer border-border bg-surface-2 hover:border-border-strong",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={f.id === "csv"}
+                  onChange={() => toggleFormat(f.id)}
+                  className="h-4 w-4 accent-[var(--primary)]"
+                />
+                <span className="text-sm font-medium text-text">{f.label}</span>
+                <span className="ml-auto text-xs text-text-faint">{f.hint}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
     </Modal>
   );
 }

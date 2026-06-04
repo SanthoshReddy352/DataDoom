@@ -13,9 +13,15 @@ CLI is the launcher/automation surface.
 - **Authoritative design:** `docs_v2/` (start at `docs_v2/00_README_Index.md`,
   which holds the **locked global decisions** every other doc obeys). The legacy
   `Docs/` set is superseded — do not build from it.
-- **Current state:** see **[status.md](status.md)**. Phases 0–2 are complete:
-  deterministic core, server + web Canvas, and the causal engine (`engine/causal/`)
-  with its web **Graph view** (React Flow). Next up is Phase 3 (failure injection).
+- **Current state:** see **[status.md](status.md)**. Phases 0–4 are complete:
+  deterministic core, server + web Canvas, the causal engine (`engine/causal/`),
+  the failure-injection engine (`engine/failure/`), and difficulty targeting
+  (`engine/difficulty/`) — each with its web surface. **Phase 5 is underway:** the
+  **plugin system** (`plugins/`, task 17) and **exporters + templates** (task
+  18.1/18.2) ship — JSON/Parquet exporters, built-in domain templates, the
+  `datadoom plugin`/`template` CLIs, and web Plugins/Templates galleries. Remaining
+  in task 18: time-series (`engine/timeseries.py`) + framework adapters; then task
+  19 (1.0 hardening).
 
 ## Project docs you must keep updated
 
@@ -41,20 +47,31 @@ src/datadoom/
     spec/            # Pydantic models, canonical hashing, validation
     dist/            # Distribution ABC, builtins, KS compliance
     causal/          # DAG (networkx) + StructuralFn + SEM execution + interventions
-    export/          # Exporter ABC, byte-stable CSV, metadata, checksums
+    failure/         # MCAR/MAR/MNAR, noise, drift, covariate-shift, leakage
+    difficulty/      # scikit-learn probes + adaptive bisection to a target band
+    timeseries.py    # additive Xₜ = T(t)+S(t)+AR(p)+εₜ (05 §6); TimeseriesFeature
+    export/          # Exporter ABC + byte-stable CSV/JSON/Parquet, metadata, checksums
+    reference.py     # build_capabilities() — machine-readable spec manifest (AI authoring)
     pipeline.py      # the single generate() entry point (RunContext)
     reports.py       # report bundle: compliance, correlation, MI, causal_truth
     progress.py errors.py
-  cli/main.py        # Typer CLI: run | validate | verify | version
-  version.py __init__.py   # public API: Spec, generate, load_spec, parse_spec, validate_spec
-tests/{unit,determinism,golden}
+  plugins/           # registry + loader + scaffolder (engine ← plugins; never the reverse)
+    contracts.py     # re-exports the engine ABCs as `datadoom.plugin` + schema()
+    registry.py loader.py scaffold.py
+  plugin.py          # public author shim: `from datadoom.plugin import Distribution, schema`
+  adapters/          # consumer loaders: pandas (core) + torch/tf/hf (optional extras)
+  templates/         # built-in domain starter specs (*.datadoom.yaml) + catalog/loader
+  cli/main.py        # Typer CLI: run|validate|verify|version|spec-reference | plugin{…} | template{…}
+  version.py __init__.py   # public API: Spec, generate, load_spec, parse_spec, validate_spec, build_capabilities
+tests/{unit,determinism,golden,api,plugin_contract}
 examples/            # *.datadoom.yaml sample specs
-docs_v2/             # authoritative design (numbered 00–19)
+docs_v2/             # authoritative design (numbered 00–21)
 ```
 
-Phase 1 packages (`store/`, `jobs/`, `api/`, `frontend/`, `webdist/`) are in
-place. Future packages (`plugins/`, `templates/`) arrive in later phases per
-`docs_v2/10` and `17`.
+Phase 1 packages (`store/`, `jobs/`, `api/`, `frontend/`, `webdist/`), the
+`plugins/` system (task 17), `templates/` (task 18.2), and `adapters/` (task 18.4)
+are in place. **Phase 5 is complete** (plugins, exporters, templates, time-series,
+adapters, AI spec-authoring manifest); see `docs_v2/20`/`21` for authoring guides.
 
 ## Engine invariants (non-negotiable — reviewers enforce)
 
@@ -96,12 +113,26 @@ interpreter path, then activate — everything after activation uses the venv.)
 
 ```powershell
 ruff check src tests        # lint
-lint-imports                # architecture boundaries (3 contracts)
+lint-imports                # architecture boundaries (5 contracts)
 mypy                        # type-check (whole package)
-pytest                      # 123 tests (unit + determinism + api)
+pytest                      # 297 tests (unit + determinism + api + plugin_contract)
 datadoom run examples/causal-fraud.datadoom.yaml --seed 42 --out .tmp_run
 datadoom verify examples/causal-fraud.datadoom.yaml --seed 42
+datadoom run examples/timeseries-sensor.datadoom.yaml --seed 7 --out .tmp_ts   # time-series
+datadoom spec-reference     # machine-readable capabilities manifest (AI authoring)
+datadoom plugin list        # core built-ins + discovered plugins
+datadoom plugin new distribution weibull   # scaffold a plugin package
+datadoom plugin check ./datadoom-plugin-weibull   # run the contract checks
+datadoom template list      # built-in domain templates
+datadoom template use fraud-detection --out my.datadoom.yaml   # start from one
 ```
+
+> Parquet export needs the optional extra: `pip install -e ".[parquet]"` (pyarrow).
+> Without it, CSV/JSON still work; a parquet run errors with an install hint.
+> Framework adapters (`datadoom.adapters`: pandas core; torch/tf/hf optional) load a
+> generated run into ML frameworks — `pip install -e ".[torch]"` etc. for those.
+> Authoring guides: `docs_v2/20` (beginners) and `docs_v2/21` (for AI/agents); the
+> live capabilities manifest is `datadoom spec-reference` / `GET /api/spec-reference`.
 
 Full manual procedures with expected outputs are in
 **[testing_guide.md](testing_guide.md)**.

@@ -43,7 +43,9 @@ from .spec.models import (
     DatetimeFeature,
     NumericFeature,
     TextFeature,
+    TimeseriesFeature,
 )
+from .timeseries import Seasonality, Trend, generate_series
 
 STAGES = (
     "intake",
@@ -51,6 +53,7 @@ STAGES = (
     "seed",
     "base_generation",
     "causal",
+    "difficulty",
     "failure_injection",
     "compliance",
     "packaging",
@@ -80,6 +83,7 @@ class RunResult:
     out_dir: str | None
     report: ReportBundle
     injected: pd.DataFrame | None = None
+    difficulty: dict[str, Any] | None = None
 
 
 def resolve_seed(spec: Spec, seed_override: int | None) -> int:
@@ -104,6 +108,22 @@ def _derived_features(spec: Spec) -> set[str]:
     return {edge.dst for edge in spec.causal.edges}
 
 
+def _clamp_and_cast(
+    values: np.ndarray, lo: float | None, hi: float | None, dtype: str, n: int
+) -> tuple[np.ndarray, float]:
+    """Apply optional ``min``/``max`` clamping and int rounding; report clamped fraction."""
+    clamped_fraction = 0.0
+    if lo is not None or hi is not None:
+        low = -np.inf if lo is None else lo
+        high = np.inf if hi is None else hi
+        mask = (values < low) | (values > high)
+        clamped_fraction = float(np.mean(mask)) if n else 0.0
+        values = np.clip(values, low, high)
+    if dtype == "int":
+        values = np.rint(values).astype("int64")
+    return values, clamped_fraction
+
+
 def _sample_feature(name: str, feat: Any, ctx: RunContext) -> tuple[np.ndarray, float]:
     """Return (values, clamped_fraction) for one feature."""
     n = ctx.spec.rows
@@ -118,16 +138,21 @@ def _sample_feature(name: str, feat: Any, ctx: RunContext) -> tuple[np.ndarray, 
                 locator=f"features.{name}",
             )
         values = REGISTRY[feat.dist].sample(rng, n, feat.params)
-        clamped_fraction = 0.0
-        if feat.min is not None or feat.max is not None:
-            lo = -np.inf if feat.min is None else feat.min
-            hi = np.inf if feat.max is None else feat.max
-            mask = (values < lo) | (values > hi)
-            clamped_fraction = float(np.mean(mask)) if n else 0.0
-            values = np.clip(values, lo, hi)
-        if feat.dtype == "int":
-            values = np.rint(values).astype("int64")
-        return values, clamped_fraction
+        return _clamp_and_cast(values, feat.min, feat.max, feat.dtype, n)
+
+    if isinstance(feat, TimeseriesFeature):
+        # εₜ flows through the noise namespace (05 §6: RNG(noise:<series>)).
+        ts_rng = ctx.rng.noise(name)
+        ctx.used_namespaces[-1] = f"noise:{name}"  # replace the feature:<name> we appended
+        series = generate_series(
+            ts_rng,
+            n,
+            trend=Trend(feat.trend.slope, feat.trend.intercept) if feat.trend else None,
+            seasonality=[Seasonality(s.amplitude, s.period, s.phase) for s in feat.seasonality],
+            ar=feat.ar,
+            noise_std=feat.noise_std,
+        )
+        return _clamp_and_cast(series, feat.min, feat.max, feat.dtype, n)
 
     if isinstance(feat, CategoricalFeature):
         return sample_categorical(rng, n, feat.categories, feat.weights), 0.0
@@ -192,7 +217,26 @@ def generate(
         causal_dag = execute_causal(ctx, columns)
 
     frame = pd.DataFrame(columns, columns=list(spec.features.keys()))
+
+    # 5a. latent features (emit: false) drove sampling / the SEM and remain in the
+    # true causal graph, but are NOT shipped — drop them before difficulty,
+    # failures, compliance, and packaging so nothing downstream (incl. the probe)
+    # can see a hidden variable.
+    latent = spec.latent_names()
+    if latent:
+        frame = frame.drop(columns=[c for c in latent if c in frame.columns])
     ctx.frames["clean"] = frame
+
+    # 5b. difficulty calibration — tune the dataset to a target baseline-metric
+    # band (feature-observation noise / label flips), baked into the clean frame.
+    difficulty_report: dict[str, Any] | None = None
+    if spec.difficulty is not None:
+        progress.emit("difficulty", 58, "calibrating difficulty")
+        from .difficulty import calibrate_difficulty
+
+        diff_result, frame = calibrate_difficulty(ctx, frame)
+        difficulty_report = diff_result.to_dict()
+        ctx.frames["clean"] = frame  # the calibrated frame is the shipped baseline
 
     # 6. failure injection — corrupt a copy; the clean baseline is preserved.
     injected: pd.DataFrame | None = None
@@ -208,6 +252,8 @@ def generate(
     progress.emit("compliance", 70, "assessing distribution fit")
     report = ComplianceReport(alpha=alpha)
     for fname, feat in spec.features.items():
+        if feat.emit is False:
+            continue  # latent — not shipped, so nothing to assess
         if isinstance(feat, NumericFeature) and feat.dist is not None:
             report.features.append(
                 assess_numeric(
@@ -218,6 +264,8 @@ def generate(
                     clamped_fraction=clamp_fractions[fname],
                     alpha=alpha,
                     dtype=feat.dtype,
+                    clamp_min=feat.min,
+                    clamp_max=feat.max,
                 )
             )
     ctx.reports["compliance"] = report
@@ -244,10 +292,22 @@ def generate(
         compliance=report,
         frame=frame,
         determinism=determinism,
+        spec=spec,
         causal=spec.causal,
         causal_dag=causal_dag,
         failures=failure_diffs,
+        injected=injected,
+        difficulty=difficulty_report,
     )
+
+    # Bind a human-readable audit report (compliance + column guide + failures +
+    # determinism) into the bundle so a download is self-describing. Registered as
+    # a tracked artifact but kept out of the metadata checksum map (like the spec).
+    if out_dir is not None:
+        from .audit import render_audit_markdown
+
+        audit_md = render_audit_markdown(spec, report_bundle, package_version=__version__)
+        artifacts.append(_write_audit_report(audit_md, Path(out_dir) / "audit_report.md"))
 
     progress.emit("packaging", 100, "done")
     return RunResult(
@@ -260,6 +320,7 @@ def generate(
         out_dir=out_path,
         report=report_bundle,
         injected=injected,
+        difficulty=difficulty_report,
     )
 
 
@@ -273,23 +334,27 @@ def _package(
     failure_diffs: list[dict[str, Any]] | None = None,
 ) -> tuple[list[ArtifactInfo], dict[str, Any], dict[str, str]]:
     out_dir.mkdir(parents=True, exist_ok=True)
-    exporter = EXPORTERS["csv"]
 
-    data_path = out_dir / "data.csv"
-    data_artifact = exporter.write(frame, data_path)
-    # Store a path relative to out_dir so checksums/metadata are location-stable.
-    data_artifact.path = data_path.name
-    data_artifact.version = "clean"
+    # Each requested format gets a file per shipped version. CSV stays first so it
+    # remains the canonical preview/determinism artifact (`data.csv`); other formats
+    # ship alongside it (09 §8).
+    formats = ctx.spec.export.formats or ["csv"]
+    want_injected = injected is not None and "injected" in ctx.spec.export.versions
+    variants: list[tuple[str, pd.DataFrame]] = [("clean", frame)]
+    if want_injected:
+        variants.append(("injected", injected))
 
-    data_artifacts = [data_artifact]
-    # The injected variant ships alongside the clean baseline when the spec asks
-    # for it (and any failures actually ran).
-    if injected is not None and "injected" in ctx.spec.export.versions:
-        injected_path = out_dir / "data.injected.csv"
-        injected_artifact = exporter.write(injected, injected_path)
-        injected_artifact.path = injected_path.name
-        injected_artifact.version = "injected"
-        data_artifacts.append(injected_artifact)
+    data_artifacts: list[ArtifactInfo] = []
+    for fmt in formats:
+        exporter = EXPORTERS[fmt]
+        for version, variant in variants:
+            stem = "data" if version == "clean" else "data.injected"
+            name = f"{stem}.{exporter.ext}"
+            artifact = exporter.write(variant, out_dir / name)
+            # Store a path relative to out_dir so checksums/metadata are location-stable.
+            artifact.path = name
+            artifact.version = version
+            data_artifacts.append(artifact)
 
     checksums = {a.path: a.checksum_sha256 for a in data_artifacts}
     determinism = {**determinism, "artifact_checksums": checksums}
@@ -307,17 +372,47 @@ def _package(
     meta_artifact = write_metadata(metadata, out_dir / "metadata.json")
     meta_artifact.path = "metadata.json"
 
-    # The resolved spec (with seed) so the bundle is self-reproducing.
+    # The resolved spec (with seed) so the bundle is self-reproducing. It is
+    # registered as a tracked, checksummed artifact (version "spec") — the locked,
+    # version-controllable record of exactly what produced this run — but kept OUT
+    # of the metadata determinism checksum map (that map is for data files only),
+    # so ``metadata.json`` stays byte-identical across runs.
     resolved_spec = dict(ctx.spec.body())
     resolved_spec["seed"] = ctx.seed
-    _write_resolved_spec(resolved_spec, out_dir / "spec.resolved.yaml")
+    spec_artifact = _write_resolved_spec(resolved_spec, out_dir / "spec.resolved.yaml")
 
-    return [*data_artifacts, meta_artifact], metadata, checksums
+    return [*data_artifacts, meta_artifact, spec_artifact], metadata, checksums
 
 
-def _write_resolved_spec(spec_body: dict[str, Any], path: Path) -> None:
+def _write_audit_report(markdown: str, path: Path) -> ArtifactInfo:
+    """Write the audit report and return its tracked-artifact info (version 'audit')."""
+    from .export import sha256_bytes
+
+    data = markdown.encode("utf-8")
+    with open(path, "wb") as fh:
+        fh.write(data)
+    return ArtifactInfo(
+        path=path.name,
+        format="md",
+        checksum_sha256=sha256_bytes(data),
+        size_bytes=len(data),
+        version="audit",
+    )
+
+
+def _write_resolved_spec(spec_body: dict[str, Any], path: Path) -> ArtifactInfo:
     import yaml
 
+    from .export import sha256_bytes
+
     text = yaml.safe_dump(spec_body, sort_keys=True, default_flow_style=False)
+    data = text.encode("utf-8")
     with open(path, "wb") as fh:
-        fh.write(text.encode("utf-8"))
+        fh.write(data)
+    return ArtifactInfo(
+        path=path.name,
+        format="yaml",
+        checksum_sha256=sha256_bytes(data),
+        size_bytes=len(data),
+        version="spec",
+    )

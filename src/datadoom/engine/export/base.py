@@ -8,6 +8,7 @@ identical file bytes on the pinned path.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,6 +35,14 @@ class ArtifactInfo:
 
 class Exporter(ABC):
     format: str
+    # File extension for the artifact (defaults to ``format`` when unset).
+    extension: str = ""
+    # Optional JSON-schema fragment for exporter options (09 §6); ``None`` for built-ins.
+    param_schema: Mapping[str, object] | None = None
+
+    @property
+    def ext(self) -> str:
+        return self.extension or self.format
 
     @abstractmethod
     def write(self, df: pd.DataFrame, path: str | Path) -> ArtifactInfo:
