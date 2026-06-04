@@ -17,12 +17,53 @@ difficulty, and failure modes — and regenerate it identically, forever, from a
 📖 **Docs:** <https://santhoshreddy352.github.io/datadoom/> · authoritative design in
 [`docs_v2/`](docs_v2/) (start at [`docs_v2/00_README_Index.md`](docs_v2/00_README_Index.md)).
 
+## Why DataDoom
+
+Synthetic data usually forces a trade-off: it's either **realistic but a black box**
+(you can't say what relationships or flaws it contains) or **controllable but
+throwaway** (you can't regenerate the exact same dataset tomorrow). That makes it hard
+to teach with, benchmark against, file a bug against, or share.
+
+**The goal:** make a dataset something you *design* and *version-control like source
+code*. You declare its structure — distributions, causal relationships, difficulty,
+and data-quality failures — in one spec file, and DataDoom regenerates it
+**byte-for-byte identically** from `(spec_hash, seed)`, while honestly reporting how
+well the realized data matches what you asked for. No network, no telemetry, no
+account: everything runs locally.
+
+**Good for:** ML teaching & reproducible benchmarks · testing data pipelines on known
+edge cases · sharing a dataset's *recipe* instead of PII · hackathon / challenge
+datasets with a known ground truth.
+
+## What it does
+
+- **Deterministic by construction** — one seeded RNG underpins everything; the same
+  spec + seed yields a bitwise-identical dataset on the pinned path.
+- **Honest statistics** — distributions are sampled correctly and their fit is
+  *reported* (KS / chi-square goodness-of-fit, compliance score); parameters are never
+  refit to flatter the sample.
+- **Causal structure** — a DAG of structural equations (linear/logistic/polynomial/…)
+  with per-node noise and `do()` interventions, plus a true-graph + mutual-information
+  report.
+- **Failure injection** — eight mechanisms (MCAR/MAR/MNAR, label & feature noise,
+  drift, covariate shift, leakage) corrupt a *copy* while the clean baseline is kept,
+  with realized-effect diffs.
+- **Difficulty targeting** — calibrate a binary label to a chosen baseline-model AUROC
+  band, reported with the achieved metric, knobs, and bisection trace.
+- **Rich feature types** — numeric/categorical/boolean/datetime, realistic seeded text
+  (names, emails, addresses), additive time-series, and latent (hidden) features.
+- **Extensible** — distributions, structural functions, failure modes, exporters, and
+  probes all ship as plugins against the engine ABCs, with zero core changes.
+- **Built to consume** — export CSV / JSON / Parquet, load a run straight into
+  pandas / PyTorch / TensorFlow / HuggingFace, and start from built-in domain templates
+  (including ready-made hackathon challenges).
+- **Two surfaces, one engine** — a CLI for automation and a web Canvas for design both
+  call the exact same pipeline, so results never diverge.
+
 ## Status
 
-**Phases 0–5 complete; 1.0 hardening underway.** The deterministic engine, server +
-web Canvas, causal engine, failure injection, difficulty targeting, the plugin system,
-exporters, templates, time-series, framework adapters, and the AI spec-authoring
-manifest all ship. Remaining for 1.0 is hardening (docs, release automation, the repro
+**Phases 0–5 complete; 1.0 hardening underway.** Everything in *What it does* above
+ships today. Remaining for 1.0 is hardening (docs site, release automation, the repro
 matrix); see [`status.md`](status.md). Optional team mode is a deferred future addon.
 
 ## Install
@@ -89,17 +130,29 @@ datasets/runs across restarts; the server binds `0.0.0.0:8000` inside the contai
 
 ## Development
 
+Clone the repo (or **fork** it first on GitHub and clone your fork if you intend to
+open a pull request), then set up a project-local virtual environment:
+
 ```bash
+# clone (use your fork's URL if you forked)
+git clone https://github.com/SanthoshReddy352/datadoom.git
+cd datadoom
+
+# project-local venv (Python 3.11 matches CI's lowest supported version)
 python -m venv .venv
 .venv\Scripts\activate          # Windows
 # source .venv/bin/activate     # macOS/Linux
-pip install -e ".[dev]"
+
+pip install -e ".[dev]"         # editable install + dev tools
 
 ruff check src tests            # lint
 lint-imports                    # architecture boundaries
 mypy                            # type-check
 pytest                          # test suite
 ```
+
+Contributions are welcome — please commit with DCO sign-off (`git commit -s`) and run
+the gates above before opening a PR. See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## The reproducibility guarantee (scoped)
 
