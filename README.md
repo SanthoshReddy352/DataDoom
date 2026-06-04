@@ -119,11 +119,22 @@ the UI — installing the package alone does not run a server.
 The image's entrypoint **is** `datadoom serve`, so the Canvas comes up as soon as
 the container runs — you do **not** run any extra command.
 
+**Build and run from a clone (works today):**
+
 ```bash
-# pull the published image (or `docker build -t datadoom:local .` from a clone)
-docker run --rm -p 8000:8000 -v datadoom-data:/data \
-  ghcr.io/santhoshreddy352/datadoom:latest
+docker build -t datadoom:local .
+docker run --rm -p 8000:8000 -v datadoom-data:/data datadoom:local
 ```
+
+**Or pull the published image** (available after a tagged release pushes it to
+GHCR — see [`docs_v2/22`](docs_v2/22_Release_and_Publishing_Runbook.md) §3):
+
+```bash
+docker run --rm -p 8000:8000 -v datadoom-data:/data ghcr.io/santhoshreddy352/datadoom:latest
+```
+
+> Each `docker run` is a **single line** on purpose — it works in PowerShell, CMD,
+> and bash alike. A `\` line-continuation is bash-only and breaks in PowerShell.
 
 Open <http://localhost:8000>. The `-v datadoom-data:/data` volume persists your
 datasets/runs across restarts; the server binds `0.0.0.0:8000` inside the container.
