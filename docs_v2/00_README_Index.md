@@ -46,6 +46,7 @@ This `docs_v2/` set is the **authoritative design** for DataDoom. It supersedes 
 | 20 | **YAML_Authoring_Guide** | Beginner-friendly, end-to-end guide to writing a spec by hand | `20_YAML_Authoring_Guide.md` |
 | 21 | **LLM_Spec_Authoring_Reference** | Terse authoring contract optimized for AI/agent spec generation | `21_LLM_Spec_Authoring_Reference.md` |
 | 22 | **Release_and_Publishing_Runbook** | Operator steps to publish docs/PyPI/Docker/releases (Pages, OIDC, provenance) | `22_Release_and_Publishing_Runbook.md` |
+| 23 | **Pushing_Changes_DCO_and_Versioning** | How to push to GitHub, sign off commits (DCO), bump versions, cut a release | `23_Pushing_Changes_DCO_and_Versioning.md` |
 
 ### Legacy docs intentionally **dropped** (SaaS/microservices-only, not part of DataDoom v2 core)
 `Advanced_System_Documents.md`, `Kafka_Event_Contract.md`, `Portobuff_Definitions.md`, `Mulit_Tenant_Isolation.md`, `SLA_SLO_RateLimiting.md`, `Infrastructure_Summary.md` — their still-relevant fragments are folded into 03, 06, 07, 14, 15. Kafka, gRPC/Protobuf, multi-tenant RLS, SLA tiers, and dedicated infra are **out of the core** (may return later as optional editions/plugins).

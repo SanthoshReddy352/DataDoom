@@ -102,8 +102,16 @@ def serve(
     bind_port = port or cfg.port
     cfg.ensure_dirs()
 
+    # 0.0.0.0 / :: are bind-all addresses, not browsable URLs — show a link the
+    # user can actually click (e.g. inside Docker, where we bind 0.0.0.0).
+    browse_host = "localhost" if bind_host in ("0.0.0.0", "::", "[::]") else bind_host
     typer.secho(
-        f"DataDoom serving on http://{bind_host}:{bind_port}  (data: {cfg.home})",
+        f"DataDoom — open the web Canvas at http://{browse_host}:{bind_port}",
+        fg=typer.colors.GREEN,
+        bold=True,
+    )
+    typer.secho(
+        f"  (bound to {bind_host}:{bind_port} · data: {cfg.home} · Ctrl+C to stop)",
         fg=typer.colors.GREEN,
     )
     if reload:
