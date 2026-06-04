@@ -1,0 +1,1743 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Local-first, open-source engine for controllable, reproducible synthetic data.">
+      
+      
+      
+        <link rel="canonical" href="https://santhoshreddy352.github.io/datadoom/llm-reference/">
+      
+      
+        <link rel="prev" href="../authoring/">
+      
+      
+        <link rel="next" href="../spec-reference/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>LLM / agent reference - DataDoom</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="deep-orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#llm--agent-authoring-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="DataDoom" class="md-header__button md-logo" aria-label="DataDoom" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DataDoom
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              LLM / agent reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="deep-orange"  aria-label="Switch to dark"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="deep-orange"  aria-label="Switch to light"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/SanthoshReddy352/datadoom" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SanthoshReddy352/datadoom
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="DataDoom" class="md-nav__button md-logo" aria-label="DataDoom" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DataDoom
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/SanthoshReddy352/datadoom" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    SanthoshReddy352/datadoom
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Authoring
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Authoring
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../authoring/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YAML authoring guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM / agent reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM / agent reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#datadoom-spec-authoring--reference-for-ai-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DataDoom spec authoring — reference for AI models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DataDoom spec authoring — reference for AI models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0-output-contract-follow-exactly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Output contract (follow exactly)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-document-skeleton" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Document skeleton
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-feature-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Feature types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Feature types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#numeric--numbers-from-a-distribution-or-causal-derived" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        numeric — numbers from a distribution (or causal-derived)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#categorical--one-label-per-row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        categorical — one label per row
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boolean--truefalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        boolean — true/false
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetime--timestamps-in-a-range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        datetime — timestamps in a range
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text--strings-filler-or-realistic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text — strings (filler or realistic)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timeseries--ordered-additive-series-over-the-row-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        timeseries — ordered additive series over the row index
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-distributions-numericdist-and-feature_noisedist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Distributions (numeric.dist and feature_noise.dist)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-causal-graph-causal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Causal graph (causal)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-failures-failures--ordered-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Failures (failures) — ordered list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-difficulty-difficulty--binary-classification-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Difficulty (difficulty) — binary classification only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-export-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Export (export)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-realistic-text-generators-textgenerator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Realistic text generators (text.generator)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-hard-rules-validation-will-enforce-these" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Hard rules (validation will enforce these)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-worked-few-shot-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Worked few-shot examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Worked few-shot examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-1k-customers-with-age-country-and-a-30-true-churn-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "1k customers with age, country, and a 30%-true churn flag."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-fraud-dataset-where-income-depends-on-ageeducation-and-drives-fraud-with-mnar-income-and-a-leaky-proxy-traintest-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "Fraud dataset where income depends on age+education and drives fraud, with MNAR income and a leaky proxy. Train/test split."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-credit-default-benchmark-calibrated-to-advanced-difficulty-with-a-hidden-risk-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "Credit-default benchmark calibrated to 'advanced' difficulty, with a hidden risk score."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-hourly-temperature-time-series-for-a-year-with-daily-seasonality-and-a-warming-trend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "Hourly temperature time-series for a year with daily seasonality and a warming trend."
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../spec-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spec reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Extending
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Extending
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#datadoom-spec-authoring--reference-for-ai-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DataDoom spec authoring — reference for AI models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DataDoom spec authoring — reference for AI models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#0-output-contract-follow-exactly" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. Output contract (follow exactly)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#1-document-skeleton" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Document skeleton
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-feature-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Feature types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Feature types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#numeric--numbers-from-a-distribution-or-causal-derived" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        numeric — numbers from a distribution (or causal-derived)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#categorical--one-label-per-row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        categorical — one label per row
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boolean--truefalse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        boolean — true/false
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#datetime--timestamps-in-a-range" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        datetime — timestamps in a range
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text--strings-filler-or-realistic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        text — strings (filler or realistic)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#timeseries--ordered-additive-series-over-the-row-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        timeseries — ordered additive series over the row index
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-distributions-numericdist-and-feature_noisedist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Distributions (numeric.dist and feature_noise.dist)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-causal-graph-causal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Causal graph (causal)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-failures-failures--ordered-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Failures (failures) — ordered list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-difficulty-difficulty--binary-classification-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Difficulty (difficulty) — binary classification only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-export-export" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Export (export)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-realistic-text-generators-textgenerator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Realistic text generators (text.generator)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-hard-rules-validation-will-enforce-these" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Hard rules (validation will enforce these)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-worked-few-shot-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Worked few-shot examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Worked few-shot examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#request-1k-customers-with-age-country-and-a-30-true-churn-flag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "1k customers with age, country, and a 30%-true churn flag."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-fraud-dataset-where-income-depends-on-ageeducation-and-drives-fraud-with-mnar-income-and-a-leaky-proxy-traintest-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "Fraud dataset where income depends on age+education and drives fraud, with MNAR income and a leaky proxy. Train/test split."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-credit-default-benchmark-calibrated-to-advanced-difficulty-with-a-hidden-risk-score" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "Credit-default benchmark calibrated to 'advanced' difficulty, with a hidden risk score."
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-hourly-temperature-time-series-for-a-year-with-daily-seasonality-and-a-warming-trend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request: "Hourly temperature time-series for a year with daily seasonality and a warming trend."
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="llm--agent-authoring-reference">LLM / agent authoring reference<a class="headerlink" href="#llm--agent-authoring-reference" title="Permanent link">&para;</a></h1>
+<p>The authoring contract for AI tools and agents that emit DataDoom specs:
+the complete capability surface, the hard validation rules, and validated
+few-shot examples. Embedded verbatim from the authoritative source.</p>
+<div class="admonition tip">
+<p class="admonition-title">Live manifest</p>
+<p>For a machine-readable, always-current capability list (including any
+installed plugins), run <code>datadoom spec-reference</code> or
+<code>GET /api/spec-reference</code> instead of hard-coding this page.</p>
+</div>
+<h2 id="datadoom-spec-authoring--reference-for-ai-models">DataDoom spec authoring — reference for AI models<a class="headerlink" href="#datadoom-spec-authoring--reference-for-ai-models" title="Permanent link">&para;</a></h2>
+<p>This is a <strong>dense, authoritative reference</strong> for an AI/agent tasked with writing a
+DataDoom spec (<code>*.datadoom.yaml</code>) from a natural-language request. It is the prose
+companion to the <strong>machine-readable capabilities manifest</strong>, which you should fetch
+programmatically when available:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datadoom<span class="w"> </span>spec-reference<span class="w">          </span><span class="c1"># JSON manifest on stdout (CLI)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>GET<span class="w"> </span>/api/spec-reference<span class="w">           </span><span class="c1"># same manifest over HTTP</span>
+</code></pre></div>
+<p>The manifest is generated from the live engine registries, so it always reflects
+the running build <strong>and any installed plugins</strong> (extra distributions, structural
+functions, failure modes, exporters). When a plugin is present, prefer the
+manifest's names over this static list.</p>
+<blockquote>
+<p>For a gentle, human-oriented tutorial see
+<a href="https://github.com/SanthoshReddy352/datadoom/blob/main/docs_v2/20_YAML_Authoring_Guide.md">20_YAML_Authoring_Reference</a>.
+This document is the
+terse contract optimized for correct machine generation.</p>
+</blockquote>
+<hr />
+<h3 id="0-output-contract-follow-exactly">0. Output contract (follow exactly)<a class="headerlink" href="#0-output-contract-follow-exactly" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Emit only YAML</strong> for a single spec document — no prose, no code fences unless
+   the caller asked for them.</li>
+<li><strong>Use only the names/fields enumerated here</strong> (or in the manifest). Never
+   invent a distribution, structural function, failure type, difficulty tier,
+   feature type, or export format. If unsure, choose the closest listed option.</li>
+<li><strong>Honor every rule in §9.</strong> A spec that violates one is rejected by
+   <code>datadoom validate</code> with a <code>locator</code>. Self-check before returning.</li>
+<li>Prefer the <strong>simplest spec</strong> that satisfies the request. Add <code>causal</code>,
+   <code>failures</code>, or <code>difficulty</code> only when the request implies them.</li>
+<li>Always set <code>datadoom_version: "1"</code>, a slug <code>name</code>, an integer <code>rows</code>, and a
+   <code>seed</code> (for reproducibility) unless told otherwise.</li>
+<li>Numbers are YAML numbers (no quotes); dates and the version are quoted strings.</li>
+</ol>
+<hr />
+<h3 id="1-document-skeleton">1. Document skeleton<a class="headerlink" href="#1-document-skeleton" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">datadoom_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span><span class="w">     </span><span class="c1"># REQUIRED, always &quot;1&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;slug-name&quot;</span><span class="w">         </span><span class="c1"># REQUIRED, matches [A-Za-z0-9_-]+ (no spaces)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;...&quot;</span><span class="w">        </span><span class="c1"># optional</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span><span class="w">                  </span><span class="c1"># optional int — fixes the draws (not part of the hash)</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="nt">rows</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span><span class="w">                </span><span class="c1"># REQUIRED, int &gt;= 1</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">features</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="nv">...</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">         </span><span class="c1"># REQUIRED — map of column name -&gt; feature (§2)</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nt">causal</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="nv">...</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">           </span><span class="c1"># optional — derive columns from others (§4)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nt">difficulty</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="nv">...</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">       </span><span class="c1"># optional — calibrate a binary label&#39;s hardness (§6)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nt">failures</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="w"> </span><span class="nv">...</span><span class="w"> </span><span class="p p-Indicator">]</span><span class="w">         </span><span class="c1"># optional — ordered data-quality corruptions (§5)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="nt">export</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="nv">...</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">           </span><span class="c1"># optional — output formats/variants/splits (§7)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nt">meta</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="w"> </span><span class="nv">...</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">             </span><span class="c1"># optional — free-form, ignored by the engine</span>
+</code></pre></div>
+<p>Column names must start with a letter or <code>_</code>. Every feature may also carry
+<code>description</code> (string) and <code>emit</code> (bool — <code>false</code> makes it <strong>latent</strong>: computed
+and able to drive the SEM, but not exported and excluded from probe/compliance).</p>
+<hr />
+<h3 id="2-feature-types">2. Feature types<a class="headerlink" href="#2-feature-types" title="Permanent link">&para;</a></h3>
+<p>Each feature has a <code>type</code> selecting its fields.</p>
+<h4 id="numeric--numbers-from-a-distribution-or-causal-derived"><code>numeric</code> — numbers from a distribution (or causal-derived)<a class="headerlink" href="#numeric--numbers-from-a-distribution-or-causal-derived" title="Permanent link">&para;</a></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">age</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">40</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">12</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">18</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="nv">90</span><span class="p p-Indicator">,</span><span class="nt"> dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+- <code>dist</code>: a distribution name (§3). <strong>Omit <code>dist</code></strong> to make it a <strong>causal-derived</strong>
+  column (its values then come from <code>causal</code> edges; it must be an edge <code>to</code>).
+- <code>params</code>: object — the keys required by <code>dist</code>.
+- <code>min</code> / <code>max</code>: optional clamps. <code>dtype</code>: <code>float</code> (default) or <code>int</code> (rounds).</p>
+<h4 id="categorical--one-label-per-row"><code>categorical</code> — one label per row<a class="headerlink" href="#categorical--one-label-per-row" title="Permanent link">&para;</a></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">tier</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">bronze</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">silver</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">gold</span><span class="p p-Indicator">],</span><span class="nt"> weights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.6</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.1</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+- <code>categories</code>: non-empty string list. <code>weights</code>: optional non-negative list,
+  positionally matched, normalized (default uniform).</p>
+<h4 id="boolean--truefalse"><code>boolean</code> — true/false<a class="headerlink" href="#boolean--truefalse" title="Permanent link">&para;</a></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nt">active</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">0.4</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">     </span><span class="c1"># P(true)=0.4; default 0.5</span>
+</code></pre></div>
+Omit <code>rate</code> and a boolean may instead be a <strong>causal-derived</strong> target (no <code>rate</code>).</p>
+<h4 id="datetime--timestamps-in-a-range"><code>datetime</code> — timestamps in a range<a class="headerlink" href="#datetime--timestamps-in-a-range" title="Permanent link">&para;</a></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">ts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">datetime</span><span class="p p-Indicator">,</span><span class="nt"> start</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2023-01-01&quot;</span><span class="p p-Indicator">,</span><span class="nt"> end</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2024-12-31&quot;</span><span class="p p-Indicator">,</span><span class="nt"> granularity</span><span class="p">:</span><span class="w"> </span><span class="nv">day</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+- <code>granularity</code>: <code>second</code> | <code>minute</code> | <code>hour</code> | <code>day</code> (default <code>day</code>).</p>
+<h4 id="text--strings-filler-or-realistic"><code>text</code> — strings (filler or realistic)<a class="headerlink" href="#text--strings-filler-or-realistic" title="Permanent link">&para;</a></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">note</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">text</span><span class="p p-Indicator">,</span><span class="nt"> generator</span><span class="p">:</span><span class="w"> </span><span class="nv">lorem</span><span class="p p-Indicator">,</span><span class="nt"> length</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">5</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="nv">30</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">person</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">text</span><span class="p p-Indicator">,</span><span class="nt"> generator</span><span class="p">:</span><span class="w"> </span><span class="nv">name</span><span class="p p-Indicator">,</span><span class="nt"> locale</span><span class="p">:</span><span class="w"> </span><span class="nv">en</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+- <code>generator</code>: <code>lorem</code> (uses <code>length</code>) or a realistic key (§8). <code>locale</code>: default <code>en</code>.</p>
+<h4 id="timeseries--ordered-additive-series-over-the-row-index"><code>timeseries</code> — ordered additive series over the row index<a class="headerlink" href="#timeseries--ordered-additive-series-over-the-row-index" title="Permanent link">&para;</a></h4>
+<p><div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">temp</span><span class="p">:</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">timeseries</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="nt">trend</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> slope</span><span class="p">:</span><span class="w"> </span><span class="nv">0.002</span><span class="p p-Indicator">,</span><span class="nt"> intercept</span><span class="p">:</span><span class="w"> </span><span class="nv">20</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">seasonality</span><span class="p">:</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> amplitude</span><span class="p">:</span><span class="w"> </span><span class="nv">6</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">24</span><span class="p p-Indicator">,</span><span class="nt"> phase</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">      </span><span class="c1"># daily</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> amplitude</span><span class="p">:</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">168</span><span class="p p-Indicator">,</span><span class="nt"> phase</span><span class="p">:</span><span class="w"> </span><span class="nv">1.5</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># weekly</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">  </span><span class="nt">ar</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.5</span><span class="p p-Indicator">]</span><span class="w">            </span><span class="c1"># AR(1); sum(|coeffs|) MUST be &lt; 1</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">noise_std</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.8</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">  </span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">float</span>
+</code></pre></div>
+Realizes <code>Xt = trend + Σ seasonality + AR(p) + N(0, noise_std²)</code>. <strong>Row order is
+the time axis</strong> (preserved). A timeseries may be a causal <strong>parent</strong>; it is never
+a causal target and is <strong>not</strong> distribution-compliance assessed.</p>
+<hr />
+<h3 id="3-distributions-numericdist-and-feature_noisedist">3. Distributions (<code>numeric.dist</code> and <code>feature_noise.dist</code>)<a class="headerlink" href="#3-distributions-numericdist-and-feature_noisedist" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>required <code>params</code></th>
+<th>constraints / notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>normal</code></td>
+<td><code>mean</code>, <code>std</code></td>
+<td><code>std &gt; 0</code>; any real value</td>
+</tr>
+<tr>
+<td><code>lognormal</code></td>
+<td><code>mu</code>, <code>sigma</code></td>
+<td><code>sigma &gt; 0</code>; positive-only; <code>mu</code>/<code>sigma</code> are in log space (median = e^mu)</td>
+</tr>
+<tr>
+<td><code>uniform</code></td>
+<td><code>low</code>, <code>high</code></td>
+<td><code>high &gt; low</code>; flat</td>
+</tr>
+<tr>
+<td><code>exponential</code></td>
+<td><code>scale</code></td>
+<td><code>scale &gt; 0</code>; non-negative; mean = scale</td>
+</tr>
+<tr>
+<td><code>poisson</code></td>
+<td><code>lam</code></td>
+<td><code>lam &gt; 0</code>; <strong>discrete</strong> integer counts</td>
+</tr>
+<tr>
+<td><code>pareto</code></td>
+<td><code>alpha</code>, <code>xm</code></td>
+<td>both <code>&gt; 0</code>; values <code>&gt;= xm</code>; heavy tail</td>
+</tr>
+</tbody>
+</table>
+<p>Pick by shape: counts → <code>poisson</code>; money/positive-skew → <code>lognormal</code> (or <code>pareto</code>
+for heavy tails); bounded score → <code>normal</code> + <code>min</code>/<code>max</code>; latency → <code>exponential</code>.</p>
+<hr />
+<h3 id="4-causal-graph-causal">4. Causal graph (<code>causal</code>)<a class="headerlink" href="#4-causal-graph-causal" title="Permanent link">&para;</a></h3>
+<p>Derive columns from others. A derived feature is declared with <strong>no <code>dist</code>/<code>rate</code></strong>
+and appears as an edge <code>to</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">causal</span><span class="p">:</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">edges</span><span class="p">:</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">age</span><span class="p p-Indicator">,</span><span class="nt">       to</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">   fn</span><span class="p">:</span><span class="w"> </span><span class="nv">linear</span><span class="p p-Indicator">,</span><span class="nt">   weight</span><span class="p">:</span><span class="w"> </span><span class="nv">800</span><span class="p p-Indicator">,</span><span class="nt"> bias</span><span class="p">:</span><span class="w"> </span><span class="nv">10000</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">education</span><span class="p p-Indicator">,</span><span class="nt"> to</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">   fn</span><span class="p">:</span><span class="w"> </span><span class="nv">map</span><span class="p p-Indicator">,</span><span class="nt">      mapping</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> hs</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nt"> college</span><span class="p">:</span><span class="w"> </span><span class="nv">15000</span><span class="p p-Indicator">,</span><span class="nt"> grad</span><span class="p">:</span><span class="w"> </span><span class="nv">40000</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">    to</span><span class="p">:</span><span class="w"> </span><span class="nv">is_fraud</span><span class="p p-Indicator">,</span><span class="nt"> fn</span><span class="p">:</span><span class="w"> </span><span class="nv">logistic</span><span class="p p-Indicator">,</span><span class="nt"> weight</span><span class="p">:</span><span class="w"> </span><span class="nv">-0.00002</span><span class="p p-Indicator">,</span><span class="nt"> bias</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">noise</span><span class="p">:</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="nt">income</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">5000</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="nt">is_fraud</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">none</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="w">  </span><span class="nt">interventions</span><span class="p">:</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> do</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> income</span><span class="p">:</span><span class="w"> </span><span class="nv">50000</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">    </span><span class="c1"># optional: pin a node to a constant</span>
+</code></pre></div>
+<p>A node <strong>sums</strong> its incoming edges' contributions, then adds node <code>noise</code>. A
+boolean target's summed value is turned into a probability (use <code>logistic</code> as its
+incoming edge) and sampled.</p>
+<p><strong>Structural functions (<code>fn</code>):</strong></p>
+<table>
+<thead>
+<tr>
+<th><code>fn</code></th>
+<th>contribution</th>
+<th>needs</th>
+<th>parent type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linear</code></td>
+<td><code>weight·parent + bias</code></td>
+<td><code>weight</code> (+ <code>bias?</code>)</td>
+<td>numeric/boolean/timeseries</td>
+</tr>
+<tr>
+<td><code>logistic</code></td>
+<td><code>σ(weight·parent + bias)</code></td>
+<td><code>weight</code> (+ <code>bias?</code>)</td>
+<td>numeric/boolean/timeseries</td>
+</tr>
+<tr>
+<td><code>polynomial</code></td>
+<td><code>Σ coeffs[i]·parent^i</code></td>
+<td><code>coeffs</code> (list)</td>
+<td>numeric/boolean/timeseries</td>
+</tr>
+<tr>
+<td><code>map</code></td>
+<td><code>mapping[parent]</code></td>
+<td><code>mapping</code> (covers all categories)</td>
+<td><strong>categorical</strong></td>
+</tr>
+<tr>
+<td><code>identity</code></td>
+<td><code>parent</code></td>
+<td>—</td>
+<td>numeric/boolean/timeseries</td>
+</tr>
+</tbody>
+</table>
+<p><code>noise[node]</code> is <code>{ dist: none }</code> (deterministic) or <code>{ dist: &lt;name&gt;, params: {…} }</code>.</p>
+<hr />
+<h3 id="5-failures-failures--ordered-list">5. Failures (<code>failures</code>) — ordered list<a class="headerlink" href="#5-failures-failures--ordered-list" title="Permanent link">&para;</a></h3>
+<p>Applied after a clean baseline is captured; export <code>injected</code> to write the
+corrupted file (§7). Each item has <code>type</code> + fields. <code>rate</code> is a fraction in <code>[0,1]</code>.</p>
+<table>
+<thead>
+<tr>
+<th><code>type</code></th>
+<th>purpose</th>
+<th>fields</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mcar</code></td>
+<td>random blanks</td>
+<td><code>column</code> <strong>or</strong> <code>columns:[…]</code>; <code>rate</code></td>
+</tr>
+<tr>
+<td><code>mar</code></td>
+<td>blanks driven by another column</td>
+<td><code>column</code>; <code>driver</code>; <code>rate</code>; <code>strength?</code> (def 2.0)</td>
+</tr>
+<tr>
+<td><code>mnar</code></td>
+<td>blanks driven by the column's own value</td>
+<td><code>column</code>; <code>driver?</code>; <code>rate</code>; <code>strength?</code> (def 2.0)</td>
+</tr>
+<tr>
+<td><code>label_noise</code></td>
+<td>flip/reassign a label</td>
+<td><code>column</code> (boolean/categorical); <code>rate</code></td>
+</tr>
+<tr>
+<td><code>feature_noise</code></td>
+<td>add noise to a number</td>
+<td><code>column</code> (numeric); <code>dist</code>; <code>params</code></td>
+</tr>
+<tr>
+<td><code>drift</code></td>
+<td>shift across the row index</td>
+<td><code>column</code> (numeric); <code>schedule</code></td>
+</tr>
+<tr>
+<td><code>covariate_shift</code></td>
+<td>rescale to target moments</td>
+<td><code>column</code> (numeric); <code>target:{mean?,std?}</code></td>
+</tr>
+<tr>
+<td><code>leakage</code></td>
+<td>plant a proxy column</td>
+<td><code>target</code> (numeric/boolean); <code>into</code> (new ≠ target); <code>noise?</code> (def 0.05)</td>
+</tr>
+</tbody>
+</table>
+<p><code>drift.schedule</code>: <code>{ kind: linear|step, magnitude: &lt;total shift&gt; }</code> (or <code>rate:
+&lt;per-row slope&gt;</code>; <code>at: 0..1</code> jump point for <code>step</code>, default 0.5).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">failures</span><span class="p">:</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mnar</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">0.12</span><span class="p p-Indicator">,</span><span class="nt"> strength</span><span class="p">:</span><span class="w"> </span><span class="nv">2.5</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">label_noise</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">is_fraud</span><span class="p p-Indicator">,</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">0.03</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">drift</span><span class="p p-Indicator">,</span><span class="nt"> column</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt"> schedule</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> kind</span><span class="p">:</span><span class="w"> </span><span class="nv">linear</span><span class="p p-Indicator">,</span><span class="nt"> magnitude</span><span class="p">:</span><span class="w"> </span><span class="nv">8000</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">leakage</span><span class="p p-Indicator">,</span><span class="nt"> target</span><span class="p">:</span><span class="w"> </span><span class="nv">is_fraud</span><span class="p p-Indicator">,</span><span class="nt"> into</span><span class="p">:</span><span class="w"> </span><span class="nv">fraud_score</span><span class="p p-Indicator">,</span><span class="nt"> noise</span><span class="p">:</span><span class="w"> </span><span class="nv">0.05</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<p>A failure must not reference a latent (<code>emit:false</code>) feature.</p>
+<hr />
+<h3 id="6-difficulty-difficulty--binary-classification-only">6. Difficulty (<code>difficulty</code>) — binary classification only<a class="headerlink" href="#6-difficulty-difficulty--binary-classification-only" title="Permanent link">&para;</a></h3>
+<p>Calibrates the dataset so a baseline probe lands in a target AUROC band.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nt">difficulty</span><span class="p">:</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">advanced</span><span class="w">        </span><span class="c1"># tier name OR { band: [0.72, 0.80] }</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">defaulted</span><span class="w">        </span><span class="c1"># boolean / 2-class categorical; not latent</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span><span class="nt">probe</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">logreg</span><span class="w">           </span><span class="c1"># logreg | tree</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span><span class="nt">max_iters</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span><span class="w">           </span><span class="c1"># int &gt;= 1 (default 8)</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span><span class="nt">knobs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">noise</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">label_noise</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># subset of {noise, label_noise}</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>tier</th>
+<th>AUROC band</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>beginner</code></td>
+<td>0.90–0.99</td>
+</tr>
+<tr>
+<td><code>intermediate</code></td>
+<td>0.80–0.90</td>
+</tr>
+<tr>
+<td><code>advanced</code></td>
+<td>0.72–0.80</td>
+</tr>
+<tr>
+<td><code>kaggle</code></td>
+<td>0.62–0.72</td>
+</tr>
+</tbody>
+</table>
+<p>Best paired with a causal label (often a <strong>latent</strong> <code>risk_score</code> <code>emit:false</code> that
+combines drivers via <code>logistic</code>). Note: calibration <strong>blurs predictors</strong>, so the
+distribution-compliance score legitimately drops — that is intended.</p>
+<hr />
+<h3 id="7-export-export">7. Export (<code>export</code>)<a class="headerlink" href="#7-export-export" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nt">export</span><span class="p">:</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span><span class="nt">formats</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">csv</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">json</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">parquet</span><span class="p p-Indicator">]</span><span class="w">   </span><span class="c1"># default [csv]; parquet needs the optional extra</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">clean</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">injected</span><span class="p p-Indicator">]</span><span class="w">     </span><span class="c1"># default [clean]; injected only with failures</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span><span class="nt">splits</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> train</span><span class="p">:</span><span class="w"> </span><span class="nv">0.8</span><span class="p p-Indicator">,</span><span class="nt"> test</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># ratios MUST sum to 1.0</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span><span class="nt">shuffle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                   </span><span class="c1"># default true</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span><span class="nt">metadata</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span><span class="w">                  </span><span class="c1"># default true</span>
+</code></pre></div>
+<hr />
+<h3 id="8-realistic-text-generators-textgenerator">8. Realistic text generators (<code>text.generator</code>)<a class="headerlink" href="#8-realistic-text-generators-textgenerator" title="Permanent link">&para;</a></h3>
+<p><code>lorem</code> (filler) plus these seeded providers:
+<code>name, first_name, last_name, email, username, phone, occupation, title,
+nationality, address, street, city, state, country, postal_code, company,
+currency, price, url, hostname, ipv4, word, sentence, color</code>.</p>
+<hr />
+<h3 id="9-hard-rules-validation-will-enforce-these">9. Hard rules (validation will enforce these)<a class="headerlink" href="#9-hard-rules-validation-will-enforce-these" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Required top-level keys present; <code>name</code> is a slug; <code>rows &gt;= 1</code>.</li>
+<li>A causal-derived feature has <strong>no <code>dist</code>/<code>rate</code></strong> and <strong>is</strong> some edge's <code>to</code>.</li>
+<li>A feature is never both sampled (<code>dist</code>) and a causal target.</li>
+<li>The causal graph is <strong>acyclic</strong>; only numeric/boolean nodes can be targets.</li>
+<li><code>map</code> needs a categorical parent and a mapping covering <strong>every</strong> category;
+   other fns need a numeric/boolean/timeseries parent.</li>
+<li><code>difficulty.label</code> is boolean or 2-class categorical and not latent; <code>knobs ⊆
+   {noise, label_noise}</code>; <code>target</code> is a tier or <code>{band:[a,b]}</code>.</li>
+<li>Failures are ordered; <code>export.versions</code> must include <code>injected</code> to emit the
+   corrupted file; a failure can't reference a latent.</li>
+<li><code>export.splits</code> ratios sum to 1.0; <code>export.formats</code> are known formats.</li>
+<li>Time-series <code>ar</code> satisfies <code>sum(|coeffs|) &lt; 1</code>; seasonality <code>period &gt; 0</code>.</li>
+<li>Distribution <code>params</code> satisfy their domain (e.g. <code>std &gt; 0</code>, <code>uniform.high &gt;
+    low</code>, <code>poisson.lam &gt; 0</code>).</li>
+</ol>
+<hr />
+<h3 id="10-worked-few-shot-examples">10. Worked few-shot examples<a class="headerlink" href="#10-worked-few-shot-examples" title="Permanent link">&para;</a></h3>
+<h4 id="request-1k-customers-with-age-country-and-a-30-true-churn-flag">Request: "1k customers with age, country, and a 30%-true churn flag."<a class="headerlink" href="#request-1k-customers-with-age-country-and-a-30-true-churn-flag" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">datadoom_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;customers-basic&quot;</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">42</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="nt">rows</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span><span class="nt">age</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">42</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">13</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">18</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="nv">90</span><span class="p p-Indicator">,</span><span class="nt"> dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span><span class="nt">country</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">US</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">UK</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">IN</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">DE</span><span class="p p-Indicator">],</span><span class="nt"> weights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">2</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">3</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">1</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">  </span><span class="nt">churned</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="p p-Indicator">,</span><span class="nt"> rate</span><span class="p">:</span><span class="w"> </span><span class="nv">0.3</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nt">export</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> formats</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">csv</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<h4 id="request-fraud-dataset-where-income-depends-on-ageeducation-and-drives-fraud-with-mnar-income-and-a-leaky-proxy-traintest-split">Request: "Fraud dataset where income depends on age+education and drives fraud, with MNAR income and a leaky proxy. Train/test split."<a class="headerlink" href="#request-fraud-dataset-where-income-depends-on-ageeducation-and-drives-fraud-with-mnar-income-and-a-leaky-proxy-traintest-split" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nt">datadoom_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fraud-causal&quot;</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nt">rows</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5000</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a><span class="w">  </span><span class="nt">age</span><span class="p">:</span><span class="w">       </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">40</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">12</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">18</span><span class="p p-Indicator">,</span><span class="nt"> max</span><span class="p">:</span><span class="w"> </span><span class="nv">90</span><span class="p p-Indicator">,</span><span class="nt"> dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="w">  </span><span class="nt">education</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">categorical</span><span class="p p-Indicator">,</span><span class="nt"> categories</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">hs</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">college</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">grad</span><span class="p p-Indicator">],</span><span class="nt"> weights</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.5</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.4</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">0.1</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">  </span><span class="nt">income</span><span class="p">:</span><span class="w">    </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># derived</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">  </span><span class="nt">is_fraud</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">                          </span><span class="c1"># derived target</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="nt">causal</span><span class="p">:</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">  </span><span class="nt">edges</span><span class="p">:</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">age</span><span class="p p-Indicator">,</span><span class="nt">       to</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">   fn</span><span class="p">:</span><span class="w"> </span><span class="nv">linear</span><span class="p p-Indicator">,</span><span class="nt">   weight</span><span class="p">:</span><span class="w"> </span><span class="nv">800</span><span class="p p-Indicator">,</span><span class="nt"> bias</span><span class="p">:</span><span class="w"> </span><span class="nv">10000</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">education</span><span class="p p-Indicator">,</span><span class="nt"> to</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">   fn</span><span class="p">:</span><span class="w"> </span><span class="nv">map</span><span class="p p-Indicator">,</span><span class="nt">      mapping</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> hs</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nt"> college</span><span class="p">:</span><span class="w"> </span><span class="nv">15000</span><span class="p p-Indicator">,</span><span class="nt"> grad</span><span class="p">:</span><span class="w"> </span><span class="nv">40000</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">    to</span><span class="p">:</span><span class="w"> </span><span class="nv">is_fraud</span><span class="p p-Indicator">,</span><span class="nt"> fn</span><span class="p">:</span><span class="w"> </span><span class="nv">logistic</span><span class="p p-Indicator">,</span><span class="nt"> weight</span><span class="p">:</span><span class="w"> </span><span class="nv">-0.00002</span><span class="p p-Indicator">,</span><span class="nt"> bias</span><span class="p">:</span><span class="w"> </span><span class="nv">1.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">  </span><span class="nt">noise</span><span class="p">:</span>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="w">    </span><span class="nt">income</span><span class="p">:</span><span class="w">   </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">5000</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="w">    </span><span class="nt">is_fraud</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">none</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="nt">failures</span><span class="p">:</span>
+<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">mnar</span><span class="p p-Indicator">,</span><span class="nt">    column</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">   rate</span><span class="p">:</span><span class="w"> </span><span class="nv">0.12</span><span class="p p-Indicator">,</span><span class="nt"> strength</span><span class="p">:</span><span class="w"> </span><span class="nv">2.5</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">leakage</span><span class="p p-Indicator">,</span><span class="nt"> target</span><span class="p">:</span><span class="w"> </span><span class="nv">is_fraud</span><span class="p p-Indicator">,</span><span class="nt"> into</span><span class="p">:</span><span class="w"> </span><span class="nv">fraud_score</span><span class="p p-Indicator">,</span><span class="nt"> noise</span><span class="p">:</span><span class="w"> </span><span class="nv">0.05</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a><span class="nt">export</span><span class="p">:</span>
+<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="w">  </span><span class="nt">formats</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">csv</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a><span class="w">  </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">clean</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">injected</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a><span class="w">  </span><span class="nt">splits</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> train</span><span class="p">:</span><span class="w"> </span><span class="nv">0.8</span><span class="p p-Indicator">,</span><span class="nt"> test</span><span class="p">:</span><span class="w"> </span><span class="nv">0.2</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<h4 id="request-credit-default-benchmark-calibrated-to-advanced-difficulty-with-a-hidden-risk-score">Request: "Credit-default benchmark calibrated to 'advanced' difficulty, with a hidden risk score."<a class="headerlink" href="#request-credit-default-benchmark-calibrated-to-advanced-difficulty-with-a-hidden-risk-score" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nt">datadoom_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;credit-advanced&quot;</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">17</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nt">rows</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6000</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">  </span><span class="nt">income</span><span class="p">:</span><span class="w">     </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">60000</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">20000</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="w">  </span><span class="nt">debt_ratio</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">normal</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> mean</span><span class="p">:</span><span class="w"> </span><span class="nv">0.35</span><span class="p p-Indicator">,</span><span class="nt"> std</span><span class="p">:</span><span class="w"> </span><span class="nv">0.12</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> min</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="w">  </span><span class="nt">inquiries</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">poisson</span><span class="p p-Indicator">,</span><span class="nt"> params</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> lam</span><span class="p">:</span><span class="w"> </span><span class="nv">2</span><span class="w"> </span><span class="p p-Indicator">},</span><span class="nt"> dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">int</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="w">  </span><span class="nt">risk_score</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">numeric</span><span class="p p-Indicator">,</span><span class="nt"> dtype</span><span class="p">:</span><span class="w"> </span><span class="nv">float</span><span class="p p-Indicator">,</span><span class="nt"> emit</span><span class="p">:</span><span class="w"> </span><span class="nv">false</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">   </span><span class="c1"># latent</span>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="w">  </span><span class="nt">defaulted</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt"> type</span><span class="p">:</span><span class="w"> </span><span class="nv">boolean</span><span class="w"> </span><span class="p p-Indicator">}</span><span class="w">                              </span><span class="c1"># label (derived)</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a><span class="nt">causal</span><span class="p">:</span>
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a><span class="w">  </span><span class="nt">edges</span><span class="p">:</span>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">income</span><span class="p p-Indicator">,</span><span class="nt">     to</span><span class="p">:</span><span class="w"> </span><span class="nv">risk_score</span><span class="p p-Indicator">,</span><span class="nt"> fn</span><span class="p">:</span><span class="w"> </span><span class="nv">linear</span><span class="p p-Indicator">,</span><span class="nt">   weight</span><span class="p">:</span><span class="w"> </span><span class="nv">-0.00003</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">debt_ratio</span><span class="p p-Indicator">,</span><span class="nt"> to</span><span class="p">:</span><span class="w"> </span><span class="nv">risk_score</span><span class="p p-Indicator">,</span><span class="nt"> fn</span><span class="p">:</span><span class="w"> </span><span class="nv">linear</span><span class="p p-Indicator">,</span><span class="nt">   weight</span><span class="p">:</span><span class="w"> </span><span class="nv">6.0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">inquiries</span><span class="p p-Indicator">,</span><span class="nt">  to</span><span class="p">:</span><span class="w"> </span><span class="nv">risk_score</span><span class="p p-Indicator">,</span><span class="nt"> fn</span><span class="p">:</span><span class="w"> </span><span class="nv">linear</span><span class="p p-Indicator">,</span><span class="nt">   weight</span><span class="p">:</span><span class="w"> </span><span class="nv">0.5</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> from</span><span class="p">:</span><span class="w"> </span><span class="nv">risk_score</span><span class="p p-Indicator">,</span><span class="nt"> to</span><span class="p">:</span><span class="w"> </span><span class="nv">defaulted</span><span class="p p-Indicator">,</span><span class="nt">  fn</span><span class="p">:</span><span class="w"> </span><span class="nv">logistic</span><span class="p p-Indicator">,</span><span class="nt"> weight</span><span class="p">:</span><span class="w"> </span><span class="nv">3.0</span><span class="p p-Indicator">,</span><span class="nt"> bias</span><span class="p">:</span><span class="w"> </span><span class="nv">-0.5</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="w">  </span><span class="nt">noise</span><span class="p">:</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a><span class="w">    </span><span class="nt">risk_score</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">none</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a><span class="w">    </span><span class="nt">defaulted</span><span class="p">:</span><span class="w">  </span><span class="p p-Indicator">{</span><span class="nt"> dist</span><span class="p">:</span><span class="w"> </span><span class="nv">none</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="nt">difficulty</span><span class="p">:</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a><span class="w">  </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">advanced</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">  </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">defaulted</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">  </span><span class="nt">probe</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">logreg</span>
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a><span class="w">  </span><span class="nt">knobs</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">noise</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">label_noise</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a><span class="nt">export</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> formats</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">csv</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<h4 id="request-hourly-temperature-time-series-for-a-year-with-daily-seasonality-and-a-warming-trend">Request: "Hourly temperature time-series for a year with daily seasonality and a warming trend."<a class="headerlink" href="#request-hourly-temperature-time-series-for-a-year-with-daily-seasonality-and-a-warming-trend" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nt">datadoom_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1&quot;</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;temperature-hourly&quot;</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="nt">rows</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8760</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="nt">features</span><span class="p">:</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span><span class="nt">temperature</span><span class="p">:</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">timeseries</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">    </span><span class="nt">trend</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> slope</span><span class="p">:</span><span class="w"> </span><span class="nv">0.0005</span><span class="p p-Indicator">,</span><span class="nt"> intercept</span><span class="p">:</span><span class="w"> </span><span class="nv">15</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">    </span><span class="nt">seasonality</span><span class="p">:</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> amplitude</span><span class="p">:</span><span class="w"> </span><span class="nv">8</span><span class="p p-Indicator">,</span><span class="nt"> period</span><span class="p">:</span><span class="w"> </span><span class="nv">24</span><span class="p p-Indicator">,</span><span class="nt"> phase</span><span class="p">:</span><span class="w"> </span><span class="nv">0</span><span class="w"> </span><span class="p p-Indicator">}</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="w">    </span><span class="nt">ar</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">0.6</span><span class="p p-Indicator">]</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="w">    </span><span class="nt">noise_std</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0</span>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="w">    </span><span class="nt">dtype</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">float</span>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="nt">export</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{</span><span class="nt"> formats</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">csv</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="p p-Indicator">}</span>
+</code></pre></div>
+<hr />
+<p><em>After generating, the author can verify with <code>datadoom validate &lt;file&gt;</code> and
+generate with <code>datadoom run &lt;file&gt; --seed &lt;n&gt; --out &lt;dir&gt;</code>. The reproducibility
+contract: same <code>(spec, seed)</code> → identical bytes.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Apache-2.0 licensed.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.top", "navigation.tracking", "content.code.copy", "search.suggest", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
