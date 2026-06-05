@@ -291,11 +291,35 @@
    `min-width: auto`, so the long command lines inside `.dd-code` would push the
    whole page wider than the viewport on phones. Letting these containers shrink
    keeps the code blocks scrolling *inside* their own box instead. */
+/* Every ancestor of a `.dd-code` block must be allowed to shrink below its
+   content, or the long command lines push the box past the viewport (grid &
+   flex items default to `min-width: auto`). With the whole chain at
+   `min-width: 0`, the `<pre>` honours `overflow-x: auto` and scrolls *inside its
+   own box* instead of overflowing the page. */
+.dd-step,
 .dd-step > div,
 .dd-card {
   min-width: 0;
 }
-.dd-code { max-width: 100%; }
+.dd-code {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Hard stop for any horizontal scroll on the marketing page. The hero & sections
+   are injected into Material's `.md-container`, so a single over-wide descendant
+   scrolls the whole page (most visible on the dot-grid hero). `overflow-x: clip`
+   contains it on the x-axis only — vertical scroll stays normal, and `:has()`
+   scopes this to the landing page so regular Material doc pages are untouched.
+   `clip` (not `hidden`) avoids creating a scroll container / breaking sticky. */
+.md-container:has(.dd-hero) { overflow-x: clip; }
+
+/* Long unbreakable tokens (e.g. the ghcr.io image ref, headings) must wrap
+   instead of forcing the page wider than the viewport. */
+.dd-hero__title,
+.dd-section__title,
+.dd-finalcta h2 { overflow-wrap: break-word; }
+.dd-install-note code { overflow-wrap: anywhere; }
 
 @media (max-width: 900px) {
   .dd-grid { grid-template-columns: repeat(2, 1fr); }
@@ -308,7 +332,15 @@
   .dd-hero__inner { padding: 3.5rem 1.1rem 3rem; }
   .dd-section { padding: 3rem 0; }
   .dd-section__title { margin-bottom: 2rem; }
-  .dd-step { flex-direction: column; gap: 0.8rem; }
+  /* Stack the number above the content. `align-items: stretch` (overriding the
+     base `flex-start`) is essential: in this column layout it makes the content
+     column fill the card's width, so the `.dd-code` block is bounded and its
+     long lines scroll *inside* their own box instead of overflowing off-screen. */
+  .dd-step {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.8rem;
+  }
   .dd-step,
   .dd-card { padding: 1.25rem 1.2rem; }
   .dd-finalcta { padding: 3.5rem 0; }
