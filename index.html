@@ -25,7 +25,7 @@
     
     
       
-        <title>DataDoom</title>
+        <title>DataDoom — reproducible synthetic data - DataDoom</title>
       
     
     
@@ -50,6 +50,8 @@
         <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
       
     
+    
+      <link rel="stylesheet" href="stylesheets/landing.css">
     
     <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
@@ -112,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Home
+              DataDoom — reproducible synthetic data
             
           </span>
         </div>
@@ -212,16 +214,177 @@
     <div class="md-container" data-md-component="container">
       
       
+
         
           
         
       
+
+<!-- ============================== HERO ============================== -->
+<section class="dd-hero">
+  <div class="dd-wrap dd-hero__inner">
+    <p class="dd-eyebrow">Local-first · Open source · Apache-2.0</p>
+    <h1 class="dd-hero__title">
+      Synthetic data you <em>design</em>,<br />
+      versioned like source code.
+    </h1>
+    <p class="dd-hero__lede">
+      Declare a dataset — distributions, causal structure, difficulty, and
+      failure modes — in one spec file, and regenerate it
+      <strong>byte-for-byte identically, forever</strong>, from
+      <code>(spec&nbsp;hash,&nbsp;seed)</code>. No network. No telemetry. No account.
+    </p>
+    <div class="dd-hero__cta">
+      <a class="dd-btn dd-btn--primary" href="authoring/">Get started →</a>
+      <a class="dd-btn dd-btn--ghost" href="https://github.com/SanthoshReddy352/datadoom">View on GitHub</a>
+    </div>
+    <div class="dd-hero__install">
+      <span class="dd-prompt">$</span> pip install datadoom
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FEATURES ============================ -->
+<section class="dd-section">
+  <div class="dd-wrap">
+    <p class="dd-eyebrow dd-eyebrow--center">Why DataDoom</p>
+    <h2 class="dd-section__title">Realistic <em>and</em> reproducible — no trade-off.</h2>
+    <div class="dd-grid">
+      <article class="dd-card">
+        <div class="dd-card__icon">⚙️</div>
+        <h3>Deterministic by construction</h3>
+        <p>One seeded RNG underpins everything. The same spec + seed yields a
+          bitwise-identical dataset on the pinned path.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">📊</div>
+        <h3>Honest statistics</h3>
+        <p>Distributions are sampled correctly and their fit is <em>reported</em>
+          (KS / chi-square, compliance score) — parameters are never refit to flatter the sample.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">🕸️</div>
+        <h3>Causal structure</h3>
+        <p>A DAG of structural equations with per-node noise and <code>do()</code>
+          interventions, plus a true-graph and mutual-information report.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">💥</div>
+        <h3>Failure injection</h3>
+        <p>Eight mechanisms — MCAR/MAR/MNAR, label &amp; feature noise, drift,
+          covariate shift, leakage — corrupt a copy while the clean baseline is kept.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">🎯</div>
+        <h3>Difficulty targeting</h3>
+        <p>Calibrate a binary label to a chosen baseline-model AUROC band,
+          reported with the achieved metric and bisection trace.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">🧩</div>
+        <h3>Extensible &amp; ready to consume</h3>
+        <p>Distributions, failure modes, and exporters ship as plugins. Export
+          CSV / JSON / Parquet, load into pandas / PyTorch / TF / HuggingFace.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ INSTALL ============================= -->
+<section class="dd-section dd-section--alt">
+  <div class="dd-wrap">
+    <p class="dd-eyebrow dd-eyebrow--center">Install</p>
+    <h2 class="dd-section__title">Up and running in two commands.</h2>
+    <div class="dd-install-grid">
+      <div class="dd-step">
+        <span class="dd-step__num">1</span>
+        <div>
+          <h3>Install the engine + CLI</h3>
+          <pre class="dd-code"><code>pip install datadoom              <span class="dd-c"># engine + CLI</span>
+pip install "datadoom[server]"    <span class="dd-c"># + web Canvas</span>
+pip install "datadoom[parquet]"   <span class="dd-c"># + Parquet export</span></code></pre>
+        </div>
+      </div>
+      <div class="dd-step">
+        <span class="dd-step__num">2</span>
+        <div>
+          <h3>Generate &amp; prove reproducibility</h3>
+          <pre class="dd-code"><code><span class="dd-c"># generate a dataset from a spec</span>
+datadoom run examples/causal-fraud.datadoom.yaml --seed 42 --out ./out
+
+<span class="dd-c"># regenerate and compare bytes</span>
+datadoom verify examples/causal-fraud.datadoom.yaml --seed 42 --against ./out</code></pre>
+        </div>
+      </div>
+      <div class="dd-step">
+        <span class="dd-step__num">3</span>
+        <div>
+          <h3>Or design in the web Canvas</h3>
+          <pre class="dd-code"><code>pip install "datadoom[server]"
+datadoom serve   <span class="dd-c"># http://127.0.0.1:8000 — no Node toolchain</span></code></pre>
+        </div>
+      </div>
+    </div>
+    <p class="dd-install-note">
+      Prefer Docker? <code>docker run --rm -p 8000:8000 ghcr.io/santhoshreddy352/datadoom:latest</code>
+      starts the Canvas automatically.
+    </p>
+  </div>
+</section>
+
+<!-- =========================== DOCS / CTA =========================== -->
+<section class="dd-section">
+  <div class="dd-wrap">
+    <p class="dd-eyebrow dd-eyebrow--center">Documentation</p>
+    <h2 class="dd-section__title">Pick your path into the docs.</h2>
+    <div class="dd-grid dd-grid--links">
+      <a class="dd-card dd-card--link" href="authoring/">
+        <h3>YAML authoring guide →</h3>
+        <p>Write your first spec, end to end.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="llm-reference/">
+        <h3>LLM / agent reference →</h3>
+        <p>The authoring contract for AI tools.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="spec-reference/">
+        <h3>Spec reference →</h3>
+        <p>The full spec surface + live manifest.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="plugins/">
+        <h3>Plugin system →</h3>
+        <p>Extend the engine with your own components.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="architecture/">
+        <h3>Architecture →</h3>
+        <p>How determinism, layering, and the pipeline fit.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="examples/">
+        <h3>Examples gallery →</h3>
+        <p>Runnable example specs and domain templates.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= FOOTER CTA ========================= -->
+<section class="dd-finalcta">
+  <div class="dd-wrap dd-finalcta__inner">
+    <h2>A dataset should be as shareable and reproducible as source code.</h2>
+    <div class="dd-hero__cta">
+      <a class="dd-btn dd-btn--primary" href="authoring/">Read the guide →</a>
+      <a class="dd-btn dd-btn--ghost" href="https://github.com/SanthoshReddy352/datadoom">Star on GitHub</a>
+    </div>
+  </div>
+</section>
+
       <main class="md-main" data-md-component="main">
         <div class="md-main__inner md-grid">
           
             
               
-              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -735,7 +898,9 @@
             
             
               
-              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" hidden>
                 <div class="md-sidebar__scrollwrap">
                   <div class="md-sidebar__inner">
                     
@@ -820,91 +985,6 @@
             <div class="md-content" data-md-component="content">
               
               <article class="md-content__inner md-typeset">
-                
-                  
-
-
-  
-  
-
-
-<h1 id="datadoom">DataDoom<a class="headerlink" href="#datadoom" title="Permanent link">&para;</a></h1>
-<p><strong>Local-first, open-source engine for controllable, reproducible synthetic data.</strong></p>
-<p>Design a dataset the way you reason about it — distributions, causal structure,
-difficulty, and failure modes — as a single spec file, and regenerate it
-<strong>identically, forever</strong>, from <code>(spec_hash, seed)</code>.</p>
-<blockquote>
-<p><strong>North star:</strong> a synthetic dataset should be as version-controllable,
-shareable, and reproducible as source code.</p>
-</blockquote>
-<hr />
-<h2 id="why-datadoom">Why DataDoom<a class="headerlink" href="#why-datadoom" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong>Deterministic by construction.</strong> All randomness flows through one seeded RNG.
-  The same spec + seed produces byte-identical artifacts on a pinned path.</li>
-<li><strong>Honest statistics.</strong> Distributions are sampled correctly and <em>fit is reported</em>
-  (KS / chi-square goodness-of-fit, compliance score) — parameters are never
-  refit to the realized sample.</li>
-<li><strong>You control the signal.</strong> A causal DAG (SEM) defines the true relationships,
-  difficulty targeting calibrates a baseline-model AUROC into a chosen band, and
-  failure injection corrupts a copy (MCAR/MAR/MNAR, noise, drift, leakage…) while
-  the clean baseline is preserved.</li>
-<li><strong>Two surfaces, one engine.</strong> A CLI for automation and a web Canvas for design
-  both call the exact same <code>engine.pipeline</code> — generation logic is never
-  duplicated.</li>
-<li><strong>Extensible.</strong> New distributions, structural functions, failure modes,
-  exporters, and probes ship as plugins against the engine ABCs — no core change.</li>
-</ul>
-<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>datadoom<span class="w">              </span><span class="c1"># engine + CLI</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;datadoom[server]&quot;</span><span class="w">    </span><span class="c1"># + web Canvas (datadoom serve)</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;datadoom[parquet]&quot;</span><span class="w">   </span><span class="c1"># + Parquet export</span>
-</code></pre></div>
-<h2 id="quickstart--cli">Quickstart — CLI<a class="headerlink" href="#quickstart--cli" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Generate a dataset from a spec (deterministic on the pinned path)</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>datadoom<span class="w"> </span>run<span class="w"> </span>examples/causal-fraud.datadoom.yaml<span class="w"> </span>--seed<span class="w"> </span><span class="m">42</span><span class="w"> </span>--out<span class="w"> </span>./out
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Prove reproducibility: regenerate and compare bytes</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>datadoom<span class="w"> </span>verify<span class="w"> </span>examples/causal-fraud.datadoom.yaml<span class="w"> </span>--seed<span class="w"> </span><span class="m">42</span><span class="w"> </span>--against<span class="w"> </span>./out
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Start from a built-in domain template</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>datadoom<span class="w"> </span>template<span class="w"> </span>list
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>datadoom<span class="w"> </span>template<span class="w"> </span>use<span class="w"> </span>fraud-detection<span class="w"> </span>--out<span class="w"> </span>my.datadoom.yaml
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># Machine-readable capabilities manifest (for AI/agent authoring)</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>datadoom<span class="w"> </span>spec-reference
-</code></pre></div>
-<h2 id="quickstart--web-canvas">Quickstart — web Canvas<a class="headerlink" href="#quickstart--web-canvas" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;datadoom[server]&quot;</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>datadoom<span class="w"> </span>serve<span class="w">         </span><span class="c1"># opens the bundled web Canvas (no Node toolchain needed)</span>
-</code></pre></div>
-<p>Create a dataset, edit the schema, wire a causal graph, configure difficulty and
-failures, generate with a live progress tracker, then preview / compare / export.</p>
-<h2 id="where-to-go-next">Where to go next<a class="headerlink" href="#where-to-go-next" title="Permanent link">&para;</a></h2>
-<ul>
-<li><strong><a href="authoring/">YAML authoring guide</a></strong> — write your first spec, end to end.</li>
-<li><strong><a href="llm-reference/">LLM / agent reference</a></strong> — the authoring contract for AI tools.</li>
-<li><strong><a href="spec-reference/">Spec reference</a></strong> — the full spec surface + live manifest.</li>
-<li><strong><a href="plugins/">Plugin system</a></strong> — extend the engine with your own components.</li>
-<li><strong><a href="architecture/">Architecture</a></strong> — how determinism, layering, and the pipeline fit.</li>
-<li><strong><a href="examples/">Examples gallery</a></strong> — runnable example specs and domain templates.</li>
-</ul>
-<hr />
-<p><em>DataDoom is Apache-2.0 licensed. The authoritative design lives in
-<a href="https://github.com/SanthoshReddy352/datadoom/tree/main/docs_v2"><code>docs_v2/</code></a>
-(start at <code>00_README_Index.md</code>).</em></p>
-
-
-
-
-
-
-
-
-
-
-
-
                 
               </article>
             </div>
