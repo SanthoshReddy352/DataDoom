@@ -147,3 +147,10 @@ Full manual procedures with expected outputs are in
 - Keep it offline: no core path requires network.
 - After finishing a task, update **status.md** (status + change history) and
   **testing_guide.md** (if behavior/commands changed).
+
+## Codebase Navigation & Understanding
+
+This repository contains a pre-built knowledge graph of its structure in `graphify-out/`.
+- **Always consult the graph first** before starting a task to understand architecture, boundaries, and dependencies.
+- Open `graphify-out/graph.html` in a browser for interactive visualization or view `graphify-out/GRAPH_REPORT.md` for a concept summary.
+- Query the graph using `/graphify query "<question>"` to trace code relationships and retrieve context before coding.

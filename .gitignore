@@ -27,6 +27,10 @@ coverage.xml
 .tmp_run/
 *.local.yaml
 
+# Graphify
+/graphify-out/
+/run_graphify.ps1
+
 # Frontend (added in a later phase)
 frontend/node_modules/
 frontend/dist/
