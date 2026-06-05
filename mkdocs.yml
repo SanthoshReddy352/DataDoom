@@ -11,6 +11,8 @@ docs_dir: docs_site
 
 theme:
   name: material
+  # Custom homepage hero lives in overrides/home.html (used by docs_site/index.md).
+  custom_dir: overrides
   palette:
     # "Paper" light is the product's default surface; offer an Ink dark toggle.
     - scheme: default
@@ -54,6 +56,9 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.tabbed:
       alternate_style: true
+
+extra_css:
+  - stylesheets/landing.css
 
 nav:
   - Home: index.md
