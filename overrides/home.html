@@ -1,0 +1,171 @@
+{#-
+  Custom DataDoom landing page. Extends the Material base; the whole marketing
+  page is injected via the `tabs` block (full-bleed, below the top header) and
+  the default article `content` block is emptied. Activated by the
+  `template: home.html` front-matter in docs_site/index.md.
+-#}
+{% extends "main.html" %}
+
+{% block tabs %}
+{{ super() }}
+
+<!-- ============================== HERO ============================== -->
+<section class="dd-hero">
+  <div class="dd-wrap dd-hero__inner">
+    <p class="dd-eyebrow">Local-first · Open source · Apache-2.0</p>
+    <h1 class="dd-hero__title">
+      Synthetic data you <em>design</em>,<br />
+      versioned like source code.
+    </h1>
+    <p class="dd-hero__lede">
+      Declare a dataset — distributions, causal structure, difficulty, and
+      failure modes — in one spec file, and regenerate it
+      <strong>byte-for-byte identically, forever</strong>, from
+      <code>(spec&nbsp;hash,&nbsp;seed)</code>. No network. No telemetry. No account.
+    </p>
+    <div class="dd-hero__cta">
+      <a class="dd-btn dd-btn--primary" href="authoring/">Get started →</a>
+      <a class="dd-btn dd-btn--ghost" href="https://github.com/SanthoshReddy352/datadoom">View on GitHub</a>
+    </div>
+    <div class="dd-hero__install">
+      <span class="dd-prompt">$</span> pip install datadoom
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FEATURES ============================ -->
+<section class="dd-section">
+  <div class="dd-wrap">
+    <p class="dd-eyebrow dd-eyebrow--center">Why DataDoom</p>
+    <h2 class="dd-section__title">Realistic <em>and</em> reproducible — no trade-off.</h2>
+    <div class="dd-grid">
+      <article class="dd-card">
+        <div class="dd-card__icon">⚙️</div>
+        <h3>Deterministic by construction</h3>
+        <p>One seeded RNG underpins everything. The same spec + seed yields a
+          bitwise-identical dataset on the pinned path.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">📊</div>
+        <h3>Honest statistics</h3>
+        <p>Distributions are sampled correctly and their fit is <em>reported</em>
+          (KS / chi-square, compliance score) — parameters are never refit to flatter the sample.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">🕸️</div>
+        <h3>Causal structure</h3>
+        <p>A DAG of structural equations with per-node noise and <code>do()</code>
+          interventions, plus a true-graph and mutual-information report.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">💥</div>
+        <h3>Failure injection</h3>
+        <p>Eight mechanisms — MCAR/MAR/MNAR, label &amp; feature noise, drift,
+          covariate shift, leakage — corrupt a copy while the clean baseline is kept.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">🎯</div>
+        <h3>Difficulty targeting</h3>
+        <p>Calibrate a binary label to a chosen baseline-model AUROC band,
+          reported with the achieved metric and bisection trace.</p>
+      </article>
+      <article class="dd-card">
+        <div class="dd-card__icon">🧩</div>
+        <h3>Extensible &amp; ready to consume</h3>
+        <p>Distributions, failure modes, and exporters ship as plugins. Export
+          CSV / JSON / Parquet, load into pandas / PyTorch / TF / HuggingFace.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ INSTALL ============================= -->
+<section class="dd-section dd-section--alt">
+  <div class="dd-wrap">
+    <p class="dd-eyebrow dd-eyebrow--center">Install</p>
+    <h2 class="dd-section__title">Up and running in two commands.</h2>
+    <div class="dd-install-grid">
+      <div class="dd-step">
+        <span class="dd-step__num">1</span>
+        <div>
+          <h3>Install the engine + CLI</h3>
+          <pre class="dd-code"><code>pip install datadoom              <span class="dd-c"># engine + CLI</span>
+pip install "datadoom[server]"    <span class="dd-c"># + web Canvas</span>
+pip install "datadoom[parquet]"   <span class="dd-c"># + Parquet export</span></code></pre>
+        </div>
+      </div>
+      <div class="dd-step">
+        <span class="dd-step__num">2</span>
+        <div>
+          <h3>Generate &amp; prove reproducibility</h3>
+          <pre class="dd-code"><code><span class="dd-c"># generate a dataset from a spec</span>
+datadoom run examples/causal-fraud.datadoom.yaml --seed 42 --out ./out
+
+<span class="dd-c"># regenerate and compare bytes</span>
+datadoom verify examples/causal-fraud.datadoom.yaml --seed 42 --against ./out</code></pre>
+        </div>
+      </div>
+      <div class="dd-step">
+        <span class="dd-step__num">3</span>
+        <div>
+          <h3>Or design in the web Canvas</h3>
+          <pre class="dd-code"><code>pip install "datadoom[server]"
+datadoom serve   <span class="dd-c"># http://127.0.0.1:8000 — no Node toolchain</span></code></pre>
+        </div>
+      </div>
+    </div>
+    <p class="dd-install-note">
+      Prefer Docker? <code>docker run --rm -p 8000:8000 ghcr.io/santhoshreddy352/datadoom:latest</code>
+      starts the Canvas automatically.
+    </p>
+  </div>
+</section>
+
+<!-- =========================== DOCS / CTA =========================== -->
+<section class="dd-section">
+  <div class="dd-wrap">
+    <p class="dd-eyebrow dd-eyebrow--center">Documentation</p>
+    <h2 class="dd-section__title">Pick your path into the docs.</h2>
+    <div class="dd-grid dd-grid--links">
+      <a class="dd-card dd-card--link" href="authoring/">
+        <h3>YAML authoring guide →</h3>
+        <p>Write your first spec, end to end.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="llm-reference/">
+        <h3>LLM / agent reference →</h3>
+        <p>The authoring contract for AI tools.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="spec-reference/">
+        <h3>Spec reference →</h3>
+        <p>The full spec surface + live manifest.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="plugins/">
+        <h3>Plugin system →</h3>
+        <p>Extend the engine with your own components.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="architecture/">
+        <h3>Architecture →</h3>
+        <p>How determinism, layering, and the pipeline fit.</p>
+      </a>
+      <a class="dd-card dd-card--link" href="examples/">
+        <h3>Examples gallery →</h3>
+        <p>Runnable example specs and domain templates.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= FOOTER CTA ========================= -->
+<section class="dd-finalcta">
+  <div class="dd-wrap dd-finalcta__inner">
+    <h2>A dataset should be as shareable and reproducible as source code.</h2>
+    <div class="dd-hero__cta">
+      <a class="dd-btn dd-btn--primary" href="authoring/">Read the guide →</a>
+      <a class="dd-btn dd-btn--ghost" href="https://github.com/SanthoshReddy352/datadoom">Star on GitHub</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{#- The marketing page replaces the article body entirely. -#}
+{% block content %}{% endblock %}

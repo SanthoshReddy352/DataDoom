@@ -1,3 +1,11 @@
+---
+title: DataDoom — reproducible synthetic data
+template: home.html
+hide:
+  - navigation
+  - toc
+---
+
 # DataDoom
 
 **Local-first, open-source engine for controllable, reproducible synthetic data.**

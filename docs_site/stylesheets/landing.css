@@ -1,0 +1,297 @@
+/* ===========================================================================
+   DataDoom — landing page ("Paper" brand). Light-only, premium, minimal.
+   Scoped to .dd-* classes so the rest of the Material docs are untouched.
+   Tokens mirror frontend/src/styles.css (the locked product design).
+   =========================================================================== */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+
+:root {
+  --dd-bg: #faf9f6;
+  --dd-surface-1: #ffffff;
+  --dd-surface-2: #f4f2ec;
+  --dd-border: #e6e2d8;
+  --dd-border-strong: #d2ccbd;
+  --dd-text: #181715;
+  --dd-text-muted: #65625b;
+  --dd-text-faint: #9a958a;
+  --dd-primary: #5b43e6;
+  --dd-primary-hover: #4a34cf;
+  --dd-primary-tint: #ece9fc;
+  --dd-display: "Space Grotesk", Georgia, serif;
+  --dd-sans: "Inter", system-ui, sans-serif;
+  --dd-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+  --dd-shadow-card: 0 1px 2px rgba(24, 23, 21, 0.04), 0 8px 24px rgba(24, 23, 21, 0.05);
+  --dd-shadow-lift: 0 2px 4px rgba(24, 23, 21, 0.05), 0 12px 36px rgba(24, 23, 21, 0.09);
+}
+
+/* The home page renders the hero in the `tabs` block; drop Material's article
+   chrome (sidebars, footer nav) so the marketing page is full-bleed. */
+.md-content { background: var(--dd-bg); }
+[data-md-color-scheme] .md-main__inner { margin-top: 0; }
+
+.dd-wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ------------------------------- HERO ------------------------------------- */
+.dd-hero {
+  background:
+    radial-gradient(60% 120% at 50% -10%, var(--dd-primary-tint) 0%, transparent 60%),
+    var(--dd-bg);
+  border-bottom: 1px solid var(--dd-border);
+  background-image:
+    radial-gradient(60% 120% at 50% -10%, var(--dd-primary-tint) 0%, transparent 60%),
+    radial-gradient(var(--dd-border) 1px, transparent 1px);
+  background-size: auto, 22px 22px;
+  background-position: center, center;
+}
+.dd-hero__inner {
+  padding: 5.5rem 1.5rem 5rem;
+  text-align: center;
+}
+.dd-eyebrow {
+  font-family: var(--dd-sans);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--dd-text-faint);
+  margin: 0 0 1.25rem;
+}
+.dd-eyebrow--center { text-align: center; }
+.dd-hero__title {
+  font-family: var(--dd-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  color: var(--dd-text);
+  margin: 0 0 1.5rem;
+}
+.dd-hero__title em { color: var(--dd-primary); font-style: normal; }
+.dd-hero__lede {
+  font-family: var(--dd-sans);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  line-height: 1.6;
+  color: var(--dd-text-muted);
+  max-width: 44rem;
+  margin: 0 auto 2.25rem;
+}
+.dd-hero__lede code {
+  font-family: var(--dd-mono);
+  font-size: 0.92em;
+  background: var(--dd-surface-2);
+  border: 1px solid var(--dd-border);
+  border-radius: 6px;
+  padding: 0.1em 0.4em;
+  white-space: nowrap;
+}
+.dd-hero__cta {
+  display: flex;
+  gap: 0.9rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+.dd-hero__install {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--dd-mono);
+  font-size: 0.95rem;
+  color: var(--dd-text);
+  background: var(--dd-surface-1);
+  border: 1px solid var(--dd-border-strong);
+  border-radius: 10px;
+  padding: 0.7rem 1.1rem;
+  box-shadow: var(--dd-shadow-card);
+}
+.dd-prompt { color: var(--dd-primary); font-weight: 700; }
+
+/* ------------------------------ BUTTONS ----------------------------------- */
+.dd-btn {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--dd-sans);
+  font-weight: 600;
+  font-size: 0.98rem;
+  border-radius: 10px;
+  padding: 0.72rem 1.4rem;
+  text-decoration: none;
+  transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+.dd-btn:hover { transform: translateY(-1px); }
+.dd-btn--primary {
+  background: var(--dd-primary);
+  color: #fff;
+  box-shadow: var(--dd-shadow-card);
+}
+.dd-btn--primary:hover { background: var(--dd-primary-hover); box-shadow: var(--dd-shadow-lift); }
+.dd-btn--ghost {
+  background: var(--dd-surface-1);
+  color: var(--dd-text);
+  border: 1px solid var(--dd-border-strong);
+}
+.dd-btn--ghost:hover { background: var(--dd-surface-2); }
+
+/* ------------------------------ SECTIONS ---------------------------------- */
+.dd-section { padding: 4.5rem 0; background: var(--dd-bg); }
+.dd-section--alt {
+  background: var(--dd-surface-2);
+  border-top: 1px solid var(--dd-border);
+  border-bottom: 1px solid var(--dd-border);
+}
+.dd-section__title {
+  font-family: var(--dd-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.6rem, 3.5vw, 2.3rem);
+  text-align: center;
+  color: var(--dd-text);
+  margin: 0.5rem 0 2.75rem;
+}
+.dd-section__title em { color: var(--dd-primary); font-style: normal; }
+
+/* ----------------------------- FEATURE GRID ------------------------------- */
+.dd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+.dd-card {
+  background: var(--dd-surface-1);
+  border: 1px solid var(--dd-border);
+  border-radius: 14px;
+  padding: 1.6rem 1.5rem;
+  box-shadow: var(--dd-shadow-card);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease;
+}
+.dd-card__icon { font-size: 1.6rem; margin-bottom: 0.75rem; }
+.dd-card h3 {
+  font-family: var(--dd-display);
+  font-weight: 600;
+  font-size: 1.12rem;
+  letter-spacing: -0.01em;
+  color: var(--dd-text);
+  margin: 0 0 0.5rem;
+}
+.dd-card p {
+  font-family: var(--dd-sans);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--dd-text-muted);
+  margin: 0;
+}
+.dd-card code {
+  font-family: var(--dd-mono);
+  font-size: 0.88em;
+  background: var(--dd-surface-2);
+  border-radius: 5px;
+  padding: 0.05em 0.35em;
+}
+.dd-card em { color: var(--dd-primary); font-style: normal; font-weight: 600; }
+
+.dd-card--link { display: block; text-decoration: none; }
+.dd-card--link:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--dd-shadow-lift);
+  border-color: var(--dd-border-strong);
+}
+.dd-card--link h3 { color: var(--dd-primary); }
+
+/* ------------------------------- INSTALL ---------------------------------- */
+.dd-install-grid {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 860px;
+  margin: 0 auto;
+}
+.dd-step {
+  display: flex;
+  gap: 1.1rem;
+  align-items: flex-start;
+  background: var(--dd-surface-1);
+  border: 1px solid var(--dd-border);
+  border-radius: 14px;
+  padding: 1.4rem 1.6rem;
+  box-shadow: var(--dd-shadow-card);
+}
+.dd-step__num {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--dd-primary);
+  color: #fff;
+  font-family: var(--dd-display);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.dd-step h3 {
+  font-family: var(--dd-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--dd-text);
+  margin: 0.15rem 0 0.8rem;
+}
+.dd-code {
+  font-family: var(--dd-mono);
+  font-size: 0.86rem;
+  line-height: 1.7;
+  background: #1b1a18;
+  color: #f4f2ec;
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  margin: 0;
+}
+.dd-code .dd-c { color: #9a958a; }
+.dd-install-note {
+  text-align: center;
+  font-family: var(--dd-sans);
+  font-size: 0.92rem;
+  color: var(--dd-text-muted);
+  margin: 2rem auto 0;
+}
+.dd-install-note code {
+  font-family: var(--dd-mono);
+  font-size: 0.86em;
+  background: var(--dd-surface-1);
+  border: 1px solid var(--dd-border);
+  border-radius: 6px;
+  padding: 0.1em 0.45em;
+}
+
+/* ------------------------------ FINAL CTA --------------------------------- */
+.dd-finalcta {
+  background:
+    radial-gradient(70% 140% at 50% 120%, var(--dd-primary-tint) 0%, transparent 60%),
+    var(--dd-bg);
+  border-top: 1px solid var(--dd-border);
+  padding: 5rem 0;
+}
+.dd-finalcta__inner { text-align: center; }
+.dd-finalcta h2 {
+  font-family: var(--dd-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+  color: var(--dd-text);
+  max-width: 40rem;
+  margin: 0 auto 2rem;
+  line-height: 1.2;
+}
+
+/* ----------------------------- RESPONSIVE --------------------------------- */
+@media (max-width: 900px) {
+  .dd-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 620px) {
+  .dd-grid { grid-template-columns: 1fr; }
+  .dd-hero__inner { padding: 4rem 1.25rem 3.5rem; }
+  .dd-step { flex-direction: column; gap: 0.8rem; }
+}
